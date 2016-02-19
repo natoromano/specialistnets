@@ -6,7 +6,7 @@ local vgg = nn.Sequential()
 -- building block
 local function ConvBNReLU(nInputPlane, nOutputPlane)
   vgg:add(nn.SpatialConvolution(nInputPlane, nOutputPlane, 3,3, 1,1, 1,1))
-  vgg:add(nn.SpatialBatchNormalization(nOutputPlane,1e-3))
+  vgg:add(nn.SpatialBatchNormalization(nOutputPlane, 1e-3))
   vgg:add(nn.ReLU(true))
   return vgg
 end
@@ -45,7 +45,7 @@ local function MSRinit(net)
   local function init(name)
     for k,v in pairs(net:findModules(name)) do
       local n = v.kW*v.kH*v.nOutputPlane
-      v.weight:normal(0,math.sqrt(2/n))
+      v.weight:normal(0, math.sqrt(2/n))
       v.bias:zero()
     end
   end

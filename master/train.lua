@@ -1,4 +1,4 @@
---> This code comes from Sergey Zagoruyko, cf https://github.com/szagoruyko/cifar.torch
+--> This code is widely inspired by Sergey Zagoruyko, cf https://github.com/szagoruyko/cifar.torch
 
 require 'xlua'
 require 'optim'
@@ -7,9 +7,9 @@ require 'optim'
 local c = require 'trepl.colorize'
 
 --> Paramerers
-opt = {save='logs', bathSize=128, learningRate=1, learningRateDecay=1e-7, 
+opt = {save='logs', batchSize=128, learningRate=1, learningRateDecay=1e-7, 
        weightDecay=0.0005, momentum=0.9, epoch_step=25, model='model', 
-       max_epoch=300, backend='nn'}
+       max_epoch=100, backend='nn'}
 print ('PARAMETERS')
 print(opt)
 
@@ -37,25 +37,24 @@ end
 print(c.blue '==>' ..' configuring model')
 local model = nn.Sequential()
 model:add(nn.BatchFlip():float())
-model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor'):cuda())
-model:add(dofile(opt.model..'.lua'):cuda())
+model:add(nn.Copy('torch.FloatTensor', 'torch.DoubleTensor'))
+model:add(dofile('master/model.lua'))
 model:get(2).updateGradInput = function(input) return end
 
 if opt.backend == 'cudnn' then
    require 'cudnn'
    cudnn.convert(model:get(3), cudnn)
 end
-
 print(model)
 
 print(c.blue '==>' ..' loading data')
-provider = torch.load 'provider.t7'
+provider = torch.load 'master/master_provider.t7'
 provider.trainData.data = provider.trainData.data:float()
 provider.testData.data = provider.testData.data:float()
 
 confusion = optim.ConfusionMatrix(100)
 
-print('Will save at '..opt.save)
+print('Will save at '.. opt.save)
 paths.mkdir(opt.save)
 testLogger = optim.Logger(paths.concat(opt.save, 'test.log'))
 testLogger:setNames{'% mean class accuracy (train set)', '% mean class accuracy (test set)'}
@@ -64,7 +63,7 @@ testLogger.showPlot = false
 parameters, gradParameters = model:getParameters()
 
 print(c.blue'==>' ..' setting criterion')
-criterion = nn.CrossEntropyCriterion():cuda()
+criterion = nn.CrossEntropyCriterion()
 
 print(c.blue'==>' ..' configuring optimizer')
 optimState = {
@@ -84,7 +83,7 @@ function train()
   
   print(c.blue '==>'.." online epoch # " .. epoch .. ' [batchSize = ' .. opt.batchSize .. ']')
 
-  local targets = torch.CudaTensor(opt.batchSize)
+  local targets = torch.DoubleTensor(opt.batchSize)
   local indices = torch.randperm(provider.trainData.data:size(1)):long():split(opt.batchSize)
   -- remove last element so that all the batches have equal size
   indices[#indices] = nil
@@ -94,7 +93,7 @@ function train()
     xlua.progress(t, #indices)
 
     local inputs = provider.trainData.data:index(1,v)
-    targets:copy(provider.trainData.labels:index(1,v))
+    targets:copy(provider.trainData.label:index(1,v))
 
     local feval = function(x)
       if x ~= parameters then parameters:copy(x) end
@@ -129,7 +128,7 @@ function test()
   local bs = 125
   for i=1,provider.testData.data:size(1),bs do
     local outputs = model:forward(provider.testData.data:narrow(1,i,bs))
-    confusion:batchAdd(outputs, provider.testData.labels:narrow(1,i,bs))
+    confusion:batchAdd(outputs, provider.testData.label:narrow(1,i,bs))
   end
 
   confusion:updateValids()
