@@ -1,6 +1,10 @@
+--> This code was widely inspired by Sergey Zagoruyko, cf https://github.com/szagoruyko/cifar.torch
+
 require 'nn'
 require 'image'
 require 'xlua'
+
+torch.setdefaulttensortype('torch.DoubleTensor')
 
 local Provider = torch.class 'Provider'
 
@@ -9,56 +13,36 @@ function Provider:__init(full)
   local vlsize = 10000
   local tesize = 10000
 
-  -- download dataset
-  if not paths.dirp('dataset') then
-     local www = 'http://web.stanford.edu/~naromano/dataset/'
-     local tar = paths.basename(www)
-     os.execute('wget ' .. www .. '-r')
-  end
-
   -- load dataset
-  self.trainData = {
-     data = torch.Tensor(40000, 3, 32, 32),
-     label = torch.Tensor(40000),
-     labelCoarse = torch.Tensor(40000),
-     size = function() return trsize end
-  }
-  local trainData = self.trainData
-  trainData = torch.load('dataset/cifar100-train.t7', 'ascii')
-  trainData.label = trainData.label + 1
+  self.trainData = torch.load('./data/cifar100-train.t7')
+  self.trainData.data = self.trainData.data:type('torch.DoubleTensor')
+  self.trainData.label = self.trainData.label + 1
+  self.trainData.size = function() return trsize end
     
-  self.valData = {
-     data = torch.Tensor(40000, 3, 32, 32),
-     label = torch.Tensor(40000),
-     labelCoarse = torch.Tensor(40000),
-     size = function() return trsize end
-  }
-  local valData = self.valData
-  valData = torch.load('dataset/cifar100-test.t7', 'ascii')
-  valData.label = valData.label + 1
+  self.valData = torch.load('./data/cifar100-val.t7')
+  self.valData.data = self.valData.data:type('torch.DoubleTensor')
+  self.valData.label = self.valData.label + 1
+  self.valData.size = function() return vlsize end
     
-  self.testData = {
-     data = torch.Tensor(40000, 3, 32, 32),
-     label = torch.Tensor(40000),
-     labelCoarse = torch.Tensor(40000),
-     size = function() return trsize end
-  }
-  local testData = self.testData
-  testData = torch.load('dataset/cifar100-val.t7', 'ascii')
-  testData.label = testData.label + 1
+  self.testData = torch.load('./data/cifar100-test.t7')
+  self.testData.data = self.testData.data:type('torch.DoubleTensor')
+  self.testData.label = self.testData.label + 1
+  self.testData.size = function() return tesize end
 
   -- resize dataset (if using small version)
-  trainData.data = trainData.data[{ {1,trsize} }]
-  trainData.labels = trainData.labels[{ {1,trsize} }]
+  self.trainData.data = self.trainData.data[{ {1, trsize} }]
+  self.trainData.label = self.trainData.label[{ {1, trsize} }]
 
-  testData.data = testData.data[{ {1,tesize} }]
-  testData.labels = testData.labels[{ {1,tesize} }]
+  self.valData.data = self.valData.data[{ {1, vlsize} }]
+  self.valData.label = self.valData.label[{ {1, vlsize} }]
+    
+  self.testData.data = self.testData.data[{ {1, tesize} }]
+  self.testData.label = self.testData.label[{ {1, tesize} }]
 end
+
 
 function Provider:normalize()
   ----------------------------------------------------------------------
-  -- preprocess/normalize train/test sets
-  --
   local trainData = self.trainData
   local valData = self.valData
   local testData = self.testData
@@ -68,7 +52,7 @@ function Provider:normalize()
 
   -- preprocess trainSet
   local normalization = nn.SpatialContrastiveNormalization(1, image.gaussian1D(7))
-  for i = 1,trainData:size() do
+  for i = 1, trainData:size() do
      xlua.progress(i, trainData:size())
      -- rgb -> yuv
      local rgb = trainData.data[i]
@@ -87,16 +71,15 @@ function Provider:normalize()
   local std_v = trainData.data:select(2,3):std()
   trainData.data:select(2,3):add(-mean_v)
   trainData.data:select(2,3):div(std_v)
-
+  -- save means
   trainData.mean_u = mean_u
   trainData.std_u = std_u
   trainData.mean_v = mean_v
   trainData.std_v = std_v
 
-
-  -- preprocess testSet
-  for i = 1,valData:size() do
-    xlua.progress(i, testData:size())
+  -- preprocess valSet
+  for i = 1, valData:size() do
+    xlua.progress(i, valData:size())
      -- rgb -> yuv
      local rgb = valData.data[i]
      local yuv = image.rgb2yuv(rgb)
@@ -110,10 +93,9 @@ function Provider:normalize()
   -- normalize v globally:
   valData.data:select(2,3):add(-mean_v)
   valData.data:select(2,3):div(std_v)
-    
 
   -- preprocess testSet
-  for i = 1,testData:size() do
+  for i = 1, testData:size() do
     xlua.progress(i, testData:size())
      -- rgb -> yuv
      local rgb = testData.data[i]
