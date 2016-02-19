@@ -6,10 +6,10 @@ require 'optim'
 -- dofile './../provider.lua'
 local c = require 'trepl.colorize'
 
---> Paramerers
+--> Parameters
 opt = {save='logs', batchSize=128, learningRate=1, learningRateDecay=1e-7, 
        weightDecay=0.0005, momentum=0.9, epoch_step=25, model='model', 
-       max_epoch=100, backend='nn'}
+       max_epoch=100, backend='nn', online='true'}
 print ('PARAMETERS')
 print(opt)
 
@@ -48,7 +48,11 @@ end
 print(model)
 
 print(c.blue '==>' ..' loading data')
-provider = torch.load 'master/master_provider.t7'
+if opt.online == 'false' then
+	provider = torch.load 'master/master_provider.t7'
+else
+	provider = torch.load '/mnt/master_provider.t7'
+end
 provider.trainData.data = provider.trainData.data:float()
 provider.testData.data = provider.testData.data:float()
 
