@@ -9,7 +9,7 @@ local c = require 'trepl.colorize'
 --> Parameters
 opt = {save='logs', batchSize=128, learningRate=1, learningRateDecay=1e-7, 
        weightDecay=0.0005, momentum=0.9, epoch_step=25, model='model', 
-       max_epoch=100, backend='cudnn', online='true'}
+       max_epoch=50, backend='cudnn', online='true'}
 print ('PARAMETERS')
 print(opt)
 
