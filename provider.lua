@@ -4,7 +4,7 @@ require 'nn'
 require 'image'
 require 'xlua'
 
-torch.setdefaulttensortype('torch.DoubleTensor')
+torch.setdefaulttensortype('torch.FloatTensor')
 
 local Provider = torch.class 'Provider'
 
@@ -15,17 +15,17 @@ function Provider:__init(full)
 
   -- load dataset
   self.trainData = torch.load('./data/cifar100-train.t7')
-  self.trainData.data = self.trainData.data:type('torch.DoubleTensor')
+  self.trainData.data = self.trainData.data:type('torch.FloatTensor')
   self.trainData.label = self.trainData.label + 1
   self.trainData.size = function() return trsize end
     
   self.valData = torch.load('./data/cifar100-val.t7')
-  self.valData.data = self.valData.data:type('torch.DoubleTensor')
+  self.valData.data = self.valData.data:type('torch.FloatTensor')
   self.valData.label = self.valData.label + 1
   self.valData.size = function() return vlsize end
     
   self.testData = torch.load('./data/cifar100-test.t7')
-  self.testData.data = self.testData.data:type('torch.DoubleTensor')
+  self.testData.data = self.testData.data:type('torch.FloatTensor')
   self.testData.label = self.testData.label + 1
   self.testData.size = function() return tesize end
 

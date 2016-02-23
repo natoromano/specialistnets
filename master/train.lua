@@ -2,16 +2,18 @@
 
 require 'xlua'
 require 'optim'
-require 'cunn'
--- dofile './../provider.lua'
 local c = require 'trepl.colorize'
 
 --> Parameters
 opt = {save='logs', batchSize=128, learningRate=1, learningRateDecay=1e-7, 
        weightDecay=0.0005, momentum=0.9, epoch_step=25, model='model', 
-       max_epoch=50, backend='nn', online='true'}
+       max_epoch=50, backend='nn', gpu='false', online='false'}
 print ('PARAMETERS')
 print(opt)
+
+if opt.gpu == 'true' then
+	require 'cunn'
+end
 
 do -- data augmentation module
   local BatchFlip, parent = torch.class('nn.BatchFlip', 'nn.Module')
@@ -37,8 +39,13 @@ end
 print(c.blue '==>' ..' configuring model')
 local model = nn.Sequential()
 model:add(nn.BatchFlip():float())
-model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor'):cuda())
-model:add(dofile('master/model.lua'):cuda())
+if gpu == 'true' then
+	model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor'):cuda())
+	model:add(dofile('master/model.lua'):cuda())
+else
+	model:add(nn.Copy('torch.FloatTensor', 'torch.FloatTensor'))
+	model:add(dofile('master/model.lua'))
+end
 model:get(2).updateGradInput = function(input) return end
 
 if opt.backend == 'cudnn' then
@@ -67,7 +74,11 @@ testLogger.showPlot = false
 parameters, gradParameters = model:getParameters()
 
 print(c.blue'==>' ..' setting criterion')
-criterion = nn.CrossEntropyCriterion():cuda()
+if opt.gpu == 'true' then
+	criterion = nn.CrossEntropyCriterion():cuda()
+else
+	criterion = nn.CrossEntropyCriterion()
+end
 
 print(c.blue'==>' ..' configuring optimizer')
 optimState = {
@@ -87,7 +98,11 @@ function train()
   
   print(c.blue '==>'.." online epoch # " .. epoch .. ' [batchSize = ' .. opt.batchSize .. ']')
 
-  local targets = torch.CudaTensor(opt.batchSize)
+  if opt.gpu == 'true' then
+  	targets = torch.CudaTensor(opt.batchSize)
+  else
+  	targets = torch.FloatTensor(opt.batchSize)
+  end
   local indices = torch.randperm(provider.trainData.data:size(1)):long():split(opt.batchSize)
   -- remove last element so that all the batches have equal size
   indices[#indices] = nil
