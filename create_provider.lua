@@ -33,6 +33,7 @@ function compute_scores(model, inputData, dim_output)
 			data = inputData.data:narrow(1, i, bs):cuda()
 		else
 			data = inputData.data:narrow(1, i, bs)
+		end
 		local outputs = model:forward(data):float()
 		scores[{ {i*bs, (i+1)*bs-1} }] = outputs
 	end
@@ -56,7 +57,7 @@ if opt.target == 'specialists' then
 	scores.train = compute_scores(model, m_provider.trainData, 100)
 	scores.val = compute_scores(model, m_provider.valData, 100)
 	scores.test = compute_scores(model, m_provider.testData, 100)
-	provider = Provider(scores=scores)
+	provider = Provider(scores)
 	provider:normalize()
 	torch.save(path, provider)
 end

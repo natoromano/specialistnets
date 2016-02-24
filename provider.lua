@@ -11,7 +11,7 @@ torch.setdefaulttensortype('torch.FloatTensor')
 
 local Provider = torch.class 'Provider'
 
-function Provider:__init(full, scores)
+function Provider:__init(scores)
   local trsize = 40000
   local vlsize = 10000
   local tesize = 10000
@@ -23,6 +23,7 @@ function Provider:__init(full, scores)
   self.trainData.size = function() return trsize end
   if scores ~= nil then
     self.trainData.scores = scores.train
+  end
     
   self.valData = torch.load('./data/cifar100-val.t7')
   self.valData.data = self.valData.data:type('torch.FloatTensor')
@@ -30,6 +31,7 @@ function Provider:__init(full, scores)
   self.valData.size = function() return vlsize end
   if scores ~= nil then
     self.valData.scores = scores.val
+  end
     
   self.testData = torch.load('./data/cifar100-test.t7')
   self.testData.data = self.testData.data:type('torch.FloatTensor')
@@ -37,22 +39,26 @@ function Provider:__init(full, scores)
   self.testData.size = function() return tesize end
   if scores ~= nil then
     self.testData.scores = scores.test
+  end
 
   -- Resize dataset (if using small version)
   self.trainData.data = self.trainData.data[{ {1, trsize} }]
   self.trainData.label = self.trainData.label[{ {1, trsize} }]
   if scores ~= nil then
     self.trainData.scores = self.trainData.scores[{ {1, trsize} }]
+  end
 
   self.valData.data = self.valData.data[{ {1, vlsize} }]
   self.valData.label = self.valData.label[{ {1, vlsize} }]
   if scores ~= nil then
     self.valData.scores = self.valData.scores[{ {1, tlsize} }]
+  end
     
   self.testData.data = self.testData.data[{ {1, tesize} }]
   self.testData.label = self.testData.label[{ {1, tesize} }]
   if scores ~= nil then
     self.testData.scores = self.testData.scores[{ {1, tesize} }]
+  end
 end
 
 
