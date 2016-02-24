@@ -17,15 +17,23 @@ cmd:text('Options')
 cmd:option('-target', 'specialists', 'Target should be specialists or master')
 cmd:option('-path', 'specialist_provider.t7', 'Path to save the provider')
 cmd:option('-model', 'master/model.net', 'Path to the master model')
-cmd:option('-data', 'master/mater_provider.t7', 'Path to master provider')
-cmd:option('-gpu', false)
+cmd:option('-data', 'master/master_provider.t7', 'Path to master provider')
+cmd:option('-backend', 'nn')
 cmd:text()
 
 -- Parse input params
 local opt = cmd:parse(arg)
 
-if opt.gpu == true then
+if opt.backend == 'cudnn' then
 	require 'cunn'
+	require 'cudnn'
+	require 'cutorch'
+end
+
+if opt.backpend == 'cunn' then
+	require 'cunn'
+	require 'cudnn'
+	require 'cutorch'
 end
 
 
@@ -35,7 +43,7 @@ function compute_scores(model, inputData, dim_output)
 	inputData must have a field .data, and a :size() method. ]]--
 	scores = torch.FloatTensor(inputData:size(), dim_output):zero()
 	local bs = 125  -- batch size for forward pass
-	for i = 1, inputData.data.size(1), bs do
+	for i = 1, inputData.data:size(1), bs do
 		if gpu == true then
 			data = inputData.data:narrow(1, i, bs):cuda()
 		else
