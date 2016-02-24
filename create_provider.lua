@@ -21,6 +21,13 @@ cmd:option('-data', 'master/mater_provider.t7', 'Path to master provider')
 cmd:option('-gpu', false)
 cmd:text()
 
+-- Parse input params
+local opt = cmd:parse(arg)
+
+if opt.gpu == true then
+	require 'cunn'
+end
+
 
 function compute_scores(model, inputData, dim_output)
 	--[[ Takes a trained model and a data object and returns the model's raw 
@@ -40,9 +47,6 @@ function compute_scores(model, inputData, dim_output)
 	return scores
 end
 
-
--- Parse input params
-local opt = cmd:parse(arg)
 
 if opt.target == 'master' then
 	provider = Provider()
