@@ -52,7 +52,7 @@ function Provider:__init(scores)
   self.valData.data = self.valData.data[{ {1, vlsize} }]
   self.valData.label = self.valData.label[{ {1, vlsize} }]
   if scores ~= nil then
-    self.valData.scores = self.valData.scores[{ {1, tlsize} }]
+    self.valData.scores = self.valData.scores[{ {1, vlsize} }]
   end
     
   self.testData.data = self.testData.data[{ {1, tesize} }]

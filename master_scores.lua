@@ -47,7 +47,7 @@ function compute_scores(model, inputData, dim_output)
 			data = inputData.data:narrow(1, i, bs)
 		end
 		local outputs = model:forward(data):float()
-		scores[{{i, i-1}] = outputs
+		scores[{{i, i+124}}] = outputs
 	end
 	return scores
 end
