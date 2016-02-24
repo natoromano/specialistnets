@@ -10,7 +10,6 @@ require 'nn'
 require 'provider.lua'
 local c = require 'trepl.colorize'
 
-
 -- Parameters
 cmd = torch.CmdLine()
 cmd:text('Train a master net')
@@ -30,16 +29,13 @@ cmd:option('-gpu', false)
 cmd:option('-checkpoint', 25)
 cmd:text()
 
-
 -- Parse input params
 local opt = cmd:parse(arg)
-
 
 -- Import cunn if GPU
 if opt.gpu == 'true' then
   require 'cunn'
 end
-
 
 -- Data augmentation
 do 
@@ -63,7 +59,6 @@ do
   end
 end
 
-
 -- Model configuration
 print(c.blue '==>' ..' configuring model')
 local model = nn.Sequential()
@@ -81,7 +76,6 @@ if opt.backend == 'cudnn' then
    require 'cudnn'
    cudnn.convert(model:get(3), cudnn)
 end
-
 
 -- Data loading
 print(c.blue '==>' ..' loading data')
@@ -227,7 +221,7 @@ function test()
 
   -- Save model every 'checkpoint' epochs
   if epoch % opt.checkpoint == 0 then
-    local filename = paths.concat(opt.save, 'model.net')
+    local filename = paths.concat(opt.save, 'model' .. epoch .. '.net')
     print(c.blue '==>' .. 'saving model to '.. filename)
     torch.save(filename, model:get(3):clearState())
   end
@@ -235,7 +229,7 @@ function test()
   confusion:zero()
 end
 
-
+--> Actual training script
 for i=1,opt.max_epoch do
   train()
   test()
