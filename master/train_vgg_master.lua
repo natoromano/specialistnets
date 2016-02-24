@@ -1,5 +1,8 @@
--- This code is widely inspired by Sergey Zagoruyko, 
--- cf https://github.com/szagoruyko/cifar.torch
+--[[ Code to train a master VGGNet on CIFAR-100 (or any training data in a
+provider file).
+
+This code is widely inspired by Sergey Zagoruyko, 
+cf https://github.com/szagoruyko/cifar.torch ]]--
 
 require 'xlua'
 require 'optim'
@@ -7,15 +10,15 @@ local c = require 'trepl.colorize'
 
 -- Parameters
 opt = {save='logs', batchSize=128, learningRate=1, learningRateDecay=1e-7, 
-       weightDecay=0.0005, momentum=0.9, epoch_step=25, model='model', 
-       max_epoch=50, backend='nn', gpu='false', online='false',
-       checkpoint=10}
+       weightDecay=0.0005, momentum=0.9, epoch_step=25, model='vgg_cifar_100', 
+       max_epoch=150, backend='cudnn', gpu=true, checkpoint=25}
 print ('PARAMETERS')
 print(opt)
 
 if opt.gpu == 'true' then
 	require 'cunn'
 end
+
 
 -- Data augmentation
 do 
@@ -39,16 +42,17 @@ do
   end
 end
 
+
 -- Model configuration
 print(c.blue '==>' ..' configuring model')
 local model = nn.Sequential()
 model:add(nn.BatchFlip():float())
-if gpu == 'true' then
+if gpu == true then
 	model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor'):cuda())
-	model:add(dofile('master/model.lua'):cuda())
+	model:add(dofile('master/' .. opt.model .. '.lua'):cuda())
 else
 	model:add(nn.Copy('torch.FloatTensor', 'torch.FloatTensor'))
-	model:add(dofile('master/model.lua'))
+	model:add(dofile('master/' .. opt.model .. '.lua'))
 end
 model:get(2).updateGradInput = function(input) return end
 
@@ -56,15 +60,11 @@ if opt.backend == 'cudnn' then
    require 'cudnn'
    cudnn.convert(model:get(3), cudnn)
 end
--- print(model)
+
 
 -- Data loading
 print(c.blue '==>' ..' loading data')
-if opt.online == 'false' then
-	provider = torch.load 'master/master_provider.t7'
-else
-	provider = torch.load '/mnt/master_provider.t7'
-end
+provider = torch.load 'master/master_provider.t7'
 provider.trainData.data = provider.trainData.data:float()
 provider.valData.data = provider.valData.data:float()
 
@@ -80,7 +80,7 @@ testLogger.showPlot = false
 parameters, gradParameters = model:getParameters()
 
 print(c.blue'==>' ..' setting criterion')
-if opt.gpu == 'true' then
+if opt.gpu == true then
 	criterion = nn.CrossEntropyCriterion():cuda()
 else
 	criterion = nn.CrossEntropyCriterion()
@@ -215,7 +215,7 @@ function test()
 end
 
 
-for i=1, opt.max_epoch do
+for i=1,opt.max_epoch do
   train()
   test()
 end

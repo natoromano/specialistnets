@@ -1,15 +1,22 @@
+--[[ VGGNet architecture for CIFAR-100 classification.
+
+This code is widely inspired by Sergey Zagoruyko, 
+cf https://github.com/szagoruyko/cifar.torch ]]--
+
 require 'nn'
 
 -- Create the model
 local vgg = nn.Sequential()
 
--- building block
+
+-- Building block
 local function ConvBNReLU(nInputPlane, nOutputPlane)
   vgg:add(nn.SpatialConvolution(nInputPlane, nOutputPlane, 3,3, 1,1, 1,1))
   vgg:add(nn.SpatialBatchNormalization(nOutputPlane, 1e-3))
   vgg:add(nn.ReLU(true))
   return vgg
 end
+
 
 -- Will use "ceil" MaxPooling because we want to save as much
 -- feature space as we can
@@ -41,6 +48,7 @@ vgg:add(nn.ReLU(true))
 vgg:add(nn.Dropout(0.5))
 vgg:add(nn.Linear(512,100))
 
+
 -- initialization from MSR
 local function MSRinit(net)
   local function init(name)
@@ -52,6 +60,7 @@ local function MSRinit(net)
   end
   init'nn.SpatialConvolution'
 end
+
 
 MSRinit(vgg)
 return vgg

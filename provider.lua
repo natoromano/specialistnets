@@ -1,11 +1,13 @@
--- This code was widely inspired by Sergey Zagoruyko
--- cf https://github.com/szagoruyko/cifar.torch
+--[[ Provider to load and pre-process CIFAR-100 data.
+
+This code is widely inspired by Sergey Zagoruyko, 
+cf https://github.com/szagoruyko/cifar.torch ]]--
 
 require 'nn'
 require 'image'
 require 'xlua'
-
 torch.setdefaulttensortype('torch.FloatTensor')
+
 
 local Provider = torch.class 'Provider'
 
