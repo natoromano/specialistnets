@@ -4,6 +4,7 @@ provider file).
 This code is widely inspired by Sergey Zagoruyko, cf 
 https://github.com/szagoruyko/cifar.torch ]]--
 
+-- Imports
 require 'xlua'
 require 'optim'
 require 'nn'
@@ -24,8 +25,8 @@ cmd:option('-weightDecay', 0.0005)
 cmd:option('-momentum', 0.9)
 cmd:option('-epoch_step', 25)
 cmd:option('-max_epoch', 150)
-cmd:option('-backend', 'nn')
-cmd:option('-gpu', false)
+cmd:option('-backend', 'cudnn')
+cmd:option('-gpu', 'true')
 cmd:option('-checkpoint', 25)
 cmd:text()
 
@@ -96,7 +97,7 @@ testLogger.showPlot = false
 parameters, gradParameters = model:getParameters()
 
 print(c.blue'==>' ..' setting criterion')
-if opt.gpu == true then
+if opt.gpu == 'true' then
   criterion = nn.CrossEntropyCriterion():cuda()
 else
   criterion = nn.CrossEntropyCriterion()

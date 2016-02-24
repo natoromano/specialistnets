@@ -3,12 +3,13 @@
 This code is widely inspired by Sergey Zagoruyko, 
 cf https://github.com/szagoruyko/cifar.torch ]]--
 
+-- Imports
 require 'nn'
 require 'image'
 require 'xlua'
 torch.setdefaulttensortype('torch.FloatTensor')
 
-
+-- Provider class
 local Provider = torch.class 'Provider'
 
 function Provider:__init(scores)

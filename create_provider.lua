@@ -1,13 +1,9 @@
---[[ Creates provider for specialist nets.
+--[[ Creates provider for master or specialist nets. ]]--
 
-This code is widely inspired by Sergey Zagoruyko, 
-cf https://github.com/szagoruyko/cifar.torch ]]--
-
+-- Imports
 require 'xlua'
-require 'optim'
 require 'nn'
-require 'provider.lua'
-local c = require 'trepl.colorize'
+dofile 'provider.lua'
 
 -- Parameters
 cmd = torch.CmdLine()
@@ -15,15 +11,15 @@ cmd:text('Create provider')
 cmd:text()
 cmd:text('Options')
 cmd:option('-target', 'specialists', 'Target should be specialists or master')
-cmd:option('-path', 'specialist_provider.t7', 'Path to save the provider')
-cmd:option('-model', 'master/model.net', 'Path to the master model')
-cmd:option('-data', 'master/master_provider.t7', 'Path to master provider')
-cmd:option('-backend', 'nn')
+cmd:option('-path', '/mnt', 'Path to save the provider')
+cmd:option('-scores', 'master/master_scores.t7', 'Path to master scores')
+cmd:option('-backend', 'cudnn')
 cmd:text()
 
 -- Parse input params
 local opt = cmd:parse(arg)
 
+-- Import necessary modules
 if opt.backend == 'cudnn' then
 	require 'cunn'
 	require 'cudnn'
@@ -36,45 +32,21 @@ if opt.backpend == 'cunn' then
 	require 'cutorch'
 end
 
-
-function compute_scores(model, inputData, dim_output)
-	--[[ Takes a trained model and a data object and returns the model's raw 
-	scores on the data
-	inputData must have a field .data, and a :size() method. ]]--
-	local scores = torch.FloatTensor(inputData:size(), dim_output):zero()
-	print scores:size()
-	local bs = 125  -- batch size for forward pass
-	for i = 1, inputData.data:size(1), bs do
-		if opt.backend == 'cudnn' or opt.backend == 'cunn' then
-			data = inputData.data:narrow(1, i, bs):cuda()
-		else
-			data = inputData.data:narrow(1, i, bs)
-		end
-		local outputs = model:forward(data):float()
-		scores[{{i, i-1}] = outputs
-	end
-	return scores
-end
-
-
+-- Master provider creation
 if opt.target == 'master' then
 	provider = Provider()
 	provider:normalize()
-	torch.save(path, provider)
+	-- Change permissions on temp mnt/ directory on AWS
+	os.execute('sudo chmod 777 ' .. opt.path)
+	torch.save(opt.path .. '/master_provider.t7', provider)
 end
 
+-- Specialist provider creation (same but with scores)
 if opt.target == 'specialists' then
-	model = torch.load(opt.model)
-	m_provider = torch.load(opt.data)
-	scores = {}
-	print(c.blue '==>'.."computing training scores...")
-	scores.train = compute_scores(model, m_provider.trainData, 100)
-	print(c.blue '==>'.."computing validation scores...")
-	scores.val = compute_scores(model, m_provider.valData, 100)
-	print(c.blue '==>'.."computing test scores...")
-	scores.test = compute_scores(model, m_provider.testData, 100)
-	torch.save('test.t7', scores)
-	-- provider = Provider(scores)
-	-- provider:normalize()
-	-- torch.save(opt.path, provider)
+	scores = torch.load(opt.scores)
+	provider = Provider(scores)
+	provider:normalize()
+	-- Change permissions on temp mnt/ directory on AWS
+	os.execute('sudo chmod 777 ' .. opt.path)
+	torch.save(opt.path .. '/specialist_provider.t7', provider)
 end

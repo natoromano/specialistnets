@@ -3,6 +3,7 @@
 This code is widely inspired by Sergey Zagoruyko, 
 cf https://github.com/szagoruyko/cifar.torch ]]--
 
+-- Imports
 require 'nn'
 
 -- Create the model
