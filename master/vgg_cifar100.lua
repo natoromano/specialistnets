@@ -8,7 +8,6 @@ require 'nn'
 -- Create the model
 local vgg = nn.Sequential()
 
-
 -- Building block
 local function ConvBNReLU(nInputPlane, nOutputPlane)
   vgg:add(nn.SpatialConvolution(nInputPlane, nOutputPlane, 3,3, 1,1, 1,1))
@@ -17,11 +16,10 @@ local function ConvBNReLU(nInputPlane, nOutputPlane)
   return vgg
 end
 
-
--- Will use "ceil" MaxPooling because we want to save as much
--- feature space as we can
+-- Use 'ceil' max pooling
 local MaxPooling = nn.SpatialMaxPooling
 
+-- VGG Architecture
 ConvBNReLU(3,64):add(nn.Dropout(0.3))
 ConvBNReLU(64,64)
 vgg:add(MaxPooling(2,2,2,2):ceil())
@@ -48,8 +46,7 @@ vgg:add(nn.ReLU(true))
 vgg:add(nn.Dropout(0.5))
 vgg:add(nn.Linear(512,100))
 
-
--- initialization from MSR
+-- Initialization from MSR
 local function MSRinit(net)
   local function init(name)
     for k,v in pairs(net:findModules(name)) do
@@ -60,7 +57,6 @@ local function MSRinit(net)
   end
   init'nn.SpatialConvolution'
 end
-
 
 MSRinit(vgg)
 return vgg

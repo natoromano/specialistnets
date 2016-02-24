@@ -57,7 +57,7 @@ function Provider:normalize()
                                           image.gaussian1D(7))
   for i = 1, trainData:size() do
      xlua.progress(i, trainData:size())
-     -- rgb -> yuv
+     -- RGB -> YUV
      local rgb = trainData.data[i]
      local yuv = image.rgb2yuv(rgb)
      -- normalize y locally:
@@ -100,7 +100,7 @@ function Provider:normalize()
   -- Preprocess testSet
   for i = 1, testData:size() do
     xlua.progress(i, testData:size())
-     -- rgb -> yuv
+     -- RGB -> YUV
      local rgb = testData.data[i]
      local yuv = image.rgb2yuv(rgb)
      -- Normalize y locally:

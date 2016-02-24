@@ -1,22 +1,43 @@
 --[[ Code to train a master VGGNet on CIFAR-100 (or any training data in a
 provider file).
 
-This code is widely inspired by Sergey Zagoruyko, 
-cf https://github.com/szagoruyko/cifar.torch ]]--
+This code is widely inspired by Sergey Zagoruyko, cf 
+https://github.com/szagoruyko/cifar.torch ]]--
 
 require 'xlua'
 require 'optim'
+require 'nn'
+require 'provider.lua'
 local c = require 'trepl.colorize'
 
--- Parameters
-opt = {save='logs', batchSize=128, learningRate=1, learningRateDecay=1e-7, 
-       weightDecay=0.0005, momentum=0.9, epoch_step=25, model='vgg_cifar_100', 
-       max_epoch=150, backend='cudnn', gpu=true, checkpoint=25}
-print ('PARAMETERS')
-print(opt)
 
+-- Parameters
+cmd = torch.CmdLine()
+cmd:text('Train a master net')
+cmd:text()
+cmd:text('Options')
+cmd:option('-model', 'vgg_cifar100')
+cmd:option('-save', 'logs')
+cmd:option('-batchSize', 128)
+cmd:option('-learningRate', 1)
+cmd:option('-learningRateDecay', 1e-7)
+cmd:option('-weightDecay', 0.0005)
+cmd:option('-momentum', 0.9)
+cmd:option('-epoch_step', 25)
+cmd:option('-max_epoch', 150)
+cmd:option('-backend', 'nn')
+cmd:option('-gpu', false)
+cmd:option('-checkpoint', 25)
+cmd:text()
+
+
+-- Parse input params
+local opt = cmd:parse(arg)
+
+
+-- Import cunn if GPU
 if opt.gpu == 'true' then
-	require 'cunn'
+  require 'cunn'
 end
 
 
@@ -48,11 +69,11 @@ print(c.blue '==>' ..' configuring model')
 local model = nn.Sequential()
 model:add(nn.BatchFlip():float())
 if gpu == true then
-	model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor'):cuda())
-	model:add(dofile('master/' .. opt.model .. '.lua'):cuda())
+  model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor'):cuda())
+  model:add(dofile('master/' .. opt.model .. '.lua'):cuda())
 else
-	model:add(nn.Copy('torch.FloatTensor', 'torch.FloatTensor'))
-	model:add(dofile('master/' .. opt.model .. '.lua'))
+  model:add(nn.Copy('torch.FloatTensor', 'torch.FloatTensor'))
+  model:add(dofile('master/' .. opt.model .. '.lua'))
 end
 model:get(2).updateGradInput = function(input) return end
 
@@ -81,9 +102,9 @@ parameters, gradParameters = model:getParameters()
 
 print(c.blue'==>' ..' setting criterion')
 if opt.gpu == true then
-	criterion = nn.CrossEntropyCriterion():cuda()
+  criterion = nn.CrossEntropyCriterion():cuda()
 else
-	criterion = nn.CrossEntropyCriterion()
+  criterion = nn.CrossEntropyCriterion()
 end
 
 print(c.blue'==>' ..' configuring optimizer')
@@ -96,24 +117,22 @@ optimState = {
 
 
 function train()
+  -- Swith to train mode (flips, dropout, normalization)
   model:training()
   epoch = epoch or 1
 
   -- Drop learning rate every "epoch_step" epochs
   if epoch % opt.epoch_step == 0 then 
-  	optimState.learningRate = optimState.learningRate/2 end
-  -- Save model every "checkpoint" epochs
-  if epoch % opt.checkpoint == 0 then 
-    torch.save('model' .. epoch .. '.t7', model) 
+    optimState.learningRate = optimState.learningRate / 2 
   end
   
   print(c.blue '==>'.." online epoch # " .. 
-  	epoch .. ' [batchSize = ' .. opt.batchSize .. ']')
+    epoch .. ' [batchSize = ' .. opt.batchSize .. ']')
 
   if opt.gpu == 'true' then
-  	targets = torch.CudaTensor(opt.batchSize)
+    targets = torch.CudaTensor(opt.batchSize)
   else
-  	targets = torch.FloatTensor(opt.batchSize)
+    targets = torch.FloatTensor(opt.batchSize)
   end
   local indices = torch.randperm(provider.trainData.data:size(1))
   indices = indices:long():split(opt.batchSize)
@@ -121,6 +140,7 @@ function train()
   indices[#indices] = nil
 
   local tic = torch.tic()
+  -- Iterate over batches
   for t,v in ipairs(indices) do
     xlua.progress(t, #indices)
 
@@ -135,7 +155,7 @@ function train()
       local f = criterion:forward(outputs, targets)
       local df_do = criterion:backward(outputs, targets)
       model:backward(inputs, df_do)
-
+      -- Add results to confusion matrix
       confusion:batchAdd(outputs, targets)
 
       return f, gradParameters
@@ -154,11 +174,11 @@ end
 
 
 function test()
-  -- Disable flips, dropouts and batch normalization
+  -- Switch to test mode
   model:evaluate()
   print(c.blue '==>'.." testing")
   local bs = 125
-  for i=1, provider.valData.data:size(1),bs do
+  for i=1,provider.valData.data:size(1),bs do
     local outputs = model:forward(provider.valData.data:narrow(1,i,bs))
     confusion:batchAdd(outputs, provider.valData.label:narrow(1,i,bs))
   end
@@ -182,6 +202,7 @@ function test()
       if f then base64im = f:read'*all' end
     end
 
+    -- Create HTML report
     local file = io.open(opt.save..'/report.html','w')
     file:write(([[
     <!DOCTYPE html>
@@ -204,10 +225,10 @@ function test()
     file:close()
   end
 
-  -- save model every 50 epochs
-  if epoch % 50 == 0 then
+  -- Save model every 'checkpoint' epochs
+  if epoch % opt.checkpoint == 0 then
     local filename = paths.concat(opt.save, 'model.net')
-    print('==> saving model to '..filename)
+    print(c.blue '==>' .. 'saving model to '.. filename)
     torch.save(filename, model:get(3):clearState())
   end
 
