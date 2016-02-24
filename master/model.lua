@@ -11,7 +11,8 @@ local function ConvBNReLU(nInputPlane, nOutputPlane)
   return vgg
 end
 
--- Will use "ceil" MaxPooling because we want to save as much feature space as we can
+-- Will use "ceil" MaxPooling because we want to save as much
+-- feature space as we can
 local MaxPooling = nn.SpatialMaxPooling
 
 ConvBNReLU(3,64):add(nn.Dropout(0.3))

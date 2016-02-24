@@ -12,7 +12,7 @@ import string
 def int_filter(s):
 	'''Only keep strings containing integers.'''
 	if not s:
-		return False
+		return True
 	return s.isdigit() or s.split(']')[0].isdigit()
 
 PATH = 'errors.txt'

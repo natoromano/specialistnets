@@ -1,13 +1,15 @@
---> This code is widely inspired by Sergey Zagoruyko, cf https://github.com/szagoruyko/cifar.torch
+-- This code is widely inspired by Sergey Zagoruyko, 
+-- cf https://github.com/szagoruyko/cifar.torch
 
 require 'xlua'
 require 'optim'
 local c = require 'trepl.colorize'
 
---> Parameters
+-- Parameters
 opt = {save='logs', batchSize=128, learningRate=1, learningRateDecay=1e-7, 
        weightDecay=0.0005, momentum=0.9, epoch_step=25, model='model', 
-       max_epoch=50, backend='nn', gpu='false', online='false'}
+       max_epoch=50, backend='nn', gpu='false', online='false',
+       checkpoint=10}
 print ('PARAMETERS')
 print(opt)
 
@@ -15,7 +17,8 @@ if opt.gpu == 'true' then
 	require 'cunn'
 end
 
-do -- data augmentation module
+-- Data augmentation
+do 
   local BatchFlip, parent = torch.class('nn.BatchFlip', 'nn.Module')
 
   function BatchFlip:__init()
@@ -36,6 +39,7 @@ do -- data augmentation module
   end
 end
 
+-- Model configuration
 print(c.blue '==>' ..' configuring model')
 local model = nn.Sequential()
 model:add(nn.BatchFlip():float())
@@ -52,8 +56,9 @@ if opt.backend == 'cudnn' then
    require 'cudnn'
    cudnn.convert(model:get(3), cudnn)
 end
-print(model)
+-- print(model)
 
+-- Data loading
 print(c.blue '==>' ..' loading data')
 if opt.online == 'false' then
 	provider = torch.load 'master/master_provider.t7'
@@ -61,14 +66,15 @@ else
 	provider = torch.load '/mnt/master_provider.t7'
 end
 provider.trainData.data = provider.trainData.data:float()
-provider.testData.data = provider.testData.data:float()
+provider.valData.data = provider.valData.data:float()
 
 confusion = optim.ConfusionMatrix(100)
 
 print('Will save at '.. opt.save)
 paths.mkdir(opt.save)
 testLogger = optim.Logger(paths.concat(opt.save, 'test.log'))
-testLogger:setNames{'% mean class accuracy (train set)', '% mean class accuracy (test set)'}
+testLogger:setNames{'% mean class accuracy (train set)', 
+                    '% mean class accuracy (test set)'}
 testLogger.showPlot = false
 
 parameters, gradParameters = model:getParameters()
@@ -93,18 +99,25 @@ function train()
   model:training()
   epoch = epoch or 1
 
-  -- drop learning rate every "epoch_step" epochs
-  if epoch % opt.epoch_step == 0 then optimState.learningRate = optimState.learningRate/2 end
+  -- Drop learning rate every "epoch_step" epochs
+  if epoch % opt.epoch_step == 0 then 
+  	optimState.learningRate = optimState.learningRate/2 end
+  -- Save model every "checkpoint" epochs
+  if epoch % opt.checkpoint == 0 then 
+    torch.save('model' .. epoch .. '.t7', model) 
+  end
   
-  print(c.blue '==>'.." online epoch # " .. epoch .. ' [batchSize = ' .. opt.batchSize .. ']')
+  print(c.blue '==>'.." online epoch # " .. 
+  	epoch .. ' [batchSize = ' .. opt.batchSize .. ']')
 
   if opt.gpu == 'true' then
   	targets = torch.CudaTensor(opt.batchSize)
   else
   	targets = torch.FloatTensor(opt.batchSize)
   end
-  local indices = torch.randperm(provider.trainData.data:size(1)):long():split(opt.batchSize)
-  -- remove last element so that all the batches have equal size
+  local indices = torch.randperm(provider.trainData.data:size(1))
+  indices = indices:long():split(opt.batchSize)
+  -- Remove last element so that all the batches have equal size
   indices[#indices] = nil
 
   local tic = torch.tic()
@@ -141,13 +154,13 @@ end
 
 
 function test()
-  -- disable flips, dropouts and batch normalization
+  -- Disable flips, dropouts and batch normalization
   model:evaluate()
   print(c.blue '==>'.." testing")
   local bs = 125
-  for i=1,provider.testData.data:size(1),bs do
-    local outputs = model:forward(provider.testData.data:narrow(1,i,bs))
-    confusion:batchAdd(outputs, provider.testData.label:narrow(1,i,bs))
+  for i=1, provider.valData.data:size(1),bs do
+    local outputs = model:forward(provider.valData.data:narrow(1,i,bs))
+    confusion:batchAdd(outputs, provider.valData.label:narrow(1,i,bs))
   end
 
   confusion:updateValids()
@@ -161,8 +174,10 @@ function test()
 
     local base64im
     do
-      os.execute(('convert -density 200 %s/test.log.eps %s/test.png'):format(opt.save,opt.save))
-      os.execute(('openssl base64 -in %s/test.png -out %s/test.base64'):format(opt.save,opt.save))
+      cmd = 'convert -density 200 %s/test.log.eps %s/test.png'
+      os.execute(cmd:format(opt.save,opt.save))
+      cmd = 'openssl base64 -in %s/test.png -out %s/test.base64'
+      os.execute(cmd:format(opt.save,opt.save))
       local f = io.open(opt.save..'/test.base64')
       if f then base64im = f:read'*all' end
     end
