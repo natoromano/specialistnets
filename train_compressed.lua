@@ -1,10 +1,11 @@
---[[ Create and train specialist networks. ]]--
+--[[ Create and train a compressed network. ]]--
 
 -- Imports
 require 'xlua'
 require 'optim'
 require 'nn'
 dofile 'provider.lua'
+dofile 'custom_criterion.lua'
 local c = require 'trepl.colorize'
 
 -- Parameters
@@ -12,9 +13,8 @@ cmd = torch.CmdLine()
 cmd:text('Train spcialist networks')
 cmd:text()
 cmd:text('Options')
-cmd:option('-model', 'vgg_specialists')
-cmd:option('-save', 'specialist_logs')
-cmd:option('-domains', 'specialists/domains.t7')
+cmd:option('-model', 'vgg_compressed')
+cmd:option('-save', 'compressed_logs')
 cmd:option('-data', '/mnt/specialist_provider.t7')
 cmd:option('-batchSize', 128)
 cmd:option('-learningRate', 1)
@@ -65,26 +65,22 @@ do
   end
 end
 
--- Specialist configuration
-print(c.blue '==>' ..' creating specialists')
-domains = torch.load(opt.domains)
-models = {}
-for i, classes in pairs(domains) do
-  local model = nn.Sequential()
-  model:add(nn.BatchFlip():float())
-  if gpu == true then
-    model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor'):cuda())
-    model:add(dofile('specialists/' .. opt.model .. '.lua'):cuda())
-  else
-    model:add(nn.Copy('torch.FloatTensor', 'torch.FloatTensor'))
-    model:add(dofile('specialists/' .. opt.model .. '.lua'))
-  end
-  model:get(2).updateGradInput = function(input) return end
+-- Model creation
+print(c.blue '==>' ..' configuring model')
+local model = nn.Sequential()
+model:add(nn.BatchFlip():float())
+if gpu == true then
+  model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor'):cuda())
+  model:add(dofile('compressed/' .. opt.model .. '.lua'):cuda())
+else
+  model:add(nn.Copy('torch.FloatTensor', 'torch.FloatTensor'))
+  model:add(dofile('compressed/' .. opt.model .. '.lua'))
+end
+model:get(2).updateGradInput = function(input) return end
 
-  if opt.backend == 'cudnn' then
-     cudnn.convert(model:get(3), cudnn)
-  end
-  models{i} = model
+if opt.backend == 'cudnn' then
+   cudnn.convert(model:get(3), cudnn)
+end
 
 -- Data loading
 print(c.blue '==>' ..' loading data')
@@ -105,9 +101,9 @@ parameters, gradParameters = model:getParameters()
 
 print(c.blue'==>' ..' setting criterion')
 if opt.gpu == 'true' then
-  criterion = DarkKnowledgeCriterion(opt.T, opt.alpha):cuda()
+  criterion = DarkKnowledgeCriterion(opt.alpha, opt.T):cuda()
 else
-  criterion = DarkKnowledgeCriterion(opt.T, opt.alpha)
+  criterion = DarkKnowledgeCriterion(opt.alpha, opt.T)
 end
 
 print(c.blue'==>' ..' configuring optimizer')
@@ -121,9 +117,7 @@ optimState = {
 
 function train()
   -- Swith to train mode (flips, dropout, normalization)
-  for i, model in pairs(models) do
-    model:training()
-  end
+  model:training()
   epoch = epoch or 1
 
   -- Drop learning rate every "epoch_step" epochs
@@ -134,11 +128,13 @@ function train()
   print(c.blue '==>'.." online epoch # " .. 
     epoch .. ' [batchSize = ' .. opt.batchSize .. ']')
 
+  targets = {}
   if opt.gpu == 'true' then
-    targets = torch.CudaTensor(opt.batchSize)
+    targets.scores = torch.CudaTensor(opt.batchSize, 100)
   else
-    targets = torch.FloatTensor(opt.batchSize)
+    targets.scores = torch.FloatTensor(opt.batchSize, 100)
   end
+  targets.labels = torch.ByteTensor(opt.batchSize)
   local indices = torch.randperm(provider.trainData.data:size(1))
   indices = indices:long():split(opt.batchSize)
   -- Remove last element so that all the batches have equal size
@@ -150,20 +146,19 @@ function train()
     xlua.progress(t, #indices)
 
     local inputs = provider.trainData.data:index(1,v)
-    targets:copy(provider.trainData.scores:index(1,v))
+    targets.scores:copy(provider.trainData.scores:index(1,v))
+    targets.labels:copy(provider.trainData.label:index(1,v))
 
     local feval = function(x)
       if x ~= parameters then parameters:copy(x) end
       gradParameters:zero()
       
-      for i, model in pairs(models) do -- FIXME !!!!!!!!!!!!!
-        local outputs = model:forward(inputs)
-        local f = criterion:forward(outputs, targets)
-        local df_do = criterion:backward(outputs, targets)
-        model:backward(inputs, df_do)
-      end
+      local outputs = model:forward(inputs)
+      local f = criterion:forward(outputs, targets)
+      local df_do = criterion:backward(outputs, targets)
+      model:backward(inputs, df_do)
       -- Add results to confusion matrix
-      confusion:batchAdd(outputs, targets) -- ????
+      confusion:batchAdd(outputs, targets.labels)
 
       return f, gradParameters
     end
@@ -182,9 +177,7 @@ end
 
 function test()
   -- Switch to test mode
-  for i, model in pairs(models) do
-    model:evaluate()
-  end
+  model:evaluate()
   print(c.blue '==>'.." testing")
   local bs = 125
   for i=1,provider.valData.data:size(1),bs do
