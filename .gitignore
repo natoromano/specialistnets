@@ -1,6 +1,19 @@
 # Compiled Lua sources
 luac.out
 
+# Providers
+*provider.t7
+
+# iTorch checkpoints
+.ipynb_checkpoints/
+
+# Test file
+test.t7
+
+# Logs
+logs/
+compressed_logs/
+
 # luarocks build files
 *.src.rock
 *.zip
@@ -39,3 +52,5 @@ luac.out
 *.x86_64
 *.hex
 
+# Data
+data/*.t7
