@@ -28,6 +28,7 @@ cmd:option('-max_epoch', 150)
 cmd:option('-backend', 'cudnn')
 cmd:option('-gpu', 'true')
 cmd:option('-checkpoint', 25)
+cmd:option('-data', '/mnt')
 cmd:text()
 
 -- Parse input params
@@ -81,7 +82,10 @@ end
 
 -- Data loading
 print(c.blue '==>' ..' loading data')
-provider = torch.load 'master/master_provider.t7'
+if string.find(opt.data, 'mnt') then
+    os.execute('sudo chmod 777 ' .. opt.data)
+end
+provider = torch.load(opt.data .. '/master_provider.t7')
 provider.trainData.data = provider.trainData.data:float()
 provider.valData.data = provider.valData.data:float()
 
