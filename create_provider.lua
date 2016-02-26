@@ -37,7 +37,9 @@ if opt.target == 'master' then
 	provider = Provider()
 	provider:normalize()
 	-- Change permissions on temp mnt/ directory on AWS
-	os.execute('sudo chmod 777 ' .. opt.path)
+	if string.find(opt.path, 'mnt') then
+		os.execute('sudo chmod 777 ' .. opt.path)
+	end
 	torch.save(opt.path .. '/master_provider.t7', provider)
 end
 
@@ -47,6 +49,8 @@ if opt.target == 'specialists' then
 	provider = Provider(scores)
 	provider:normalize()
 	-- Change permissions on temp mnt/ directory on AWS
-	os.execute('sudo chmod 777 ' .. opt.path)
+	if string.find(opt.path, 'mnt') then
+		os.execute('sudo chmod 777 ' .. opt.path)
+	end
 	torch.save(opt.path .. '/specialist_provider.t7', provider)
 end
