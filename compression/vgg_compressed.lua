@@ -19,23 +19,23 @@ end
 local MaxPooling = nn.SpatialMaxPooling
 
 -- VGG Architecture
-ConvBNReLU(3,64):add(nn.Dropout(0.3))
+ConvBNReLU(3,32):add(nn.Dropout(0.3))
+ConvBNReLU(32,32)
+spec:add(MaxPooling(2,2,2,2):ceil())
+ConvBNReLU(32,64):add(nn.Dropout(0.4))
 ConvBNReLU(64,64)
 spec:add(MaxPooling(2,2,2,2):ceil())
 ConvBNReLU(64,128):add(nn.Dropout(0.4))
+ConvBNReLU(128,128):add(nn.Dropout(0.4))
 ConvBNReLU(128,128)
 spec:add(MaxPooling(2,2,2,2):ceil())
-ConvBNReLU(128,256):add(nn.Dropout(0.4))
-ConvBNReLU(256,256):add(nn.Dropout(0.4))
-ConvBNReLU(256,256)
-spec:add(MaxPooling(2,2,2,2):ceil())
-spec:add(nn.View(256))
+spec:add(nn.View(128*4*4))
 spec:add(nn.Dropout(0.5))
-spec:add(nn.Linear(256,256))
-spec:add(nn.BatchNormalization(256))
+spec:add(nn.Linear(128*4*4,512))
+spec:add(nn.BatchNormalization(512))
 spec:add(nn.ReLU(true))
 spec:add(nn.Dropout(0.5))
-spec:add(nn.Linear(256,100))
+spec:add(nn.Linear(512,100))
 
 -- Initialization from MSR
 local function MSRinit(net)

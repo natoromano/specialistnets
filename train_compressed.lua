@@ -71,10 +71,10 @@ local model = nn.Sequential()
 model:add(nn.BatchFlip():float())
 if gpu == true then
   model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor'):cuda())
-  model:add(dofile('compressed/' .. opt.model .. '.lua'):cuda())
+  model:add(dofile('compression/' .. opt.model .. '.lua'):cuda())
 else
   model:add(nn.Copy('torch.FloatTensor', 'torch.FloatTensor'))
-  model:add(dofile('compressed/' .. opt.model .. '.lua'))
+  model:add(dofile('compression/' .. opt.model .. '.lua'))
 end
 model:get(2).updateGradInput = function(input) return end
 
@@ -131,10 +131,11 @@ function train()
   targets = {}
   if opt.gpu == 'true' then
     targets.scores = torch.CudaTensor(opt.batchSize, 100)
+    targets.labels = torch.CudaTensor(opt.batchSize)
   else
     targets.scores = torch.FloatTensor(opt.batchSize, 100)
+    targets.labels = torch.FloatTensor(opt.batchSize)
   end
-  targets.labels = torch.ByteTensor(opt.batchSize)
   local indices = torch.randperm(provider.trainData.data:size(1))
   indices = indices:long():split(opt.batchSize)
   -- Remove last element so that all the batches have equal size
@@ -148,7 +149,6 @@ function train()
     local inputs = provider.trainData.data:index(1,v)
     targets.scores:copy(provider.trainData.scores:index(1,v))
     targets.labels:copy(provider.trainData.label:index(1,v))
-
     local feval = function(x)
       if x ~= parameters then parameters:copy(x) end
       gradParameters:zero()
