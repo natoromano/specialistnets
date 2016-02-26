@@ -65,7 +65,7 @@ end
 print(c.blue '==>' ..' configuring model')
 local model = nn.Sequential()
 model:add(nn.BatchFlip():float())
-if gpu == true then
+if opt.gpu == 'true' then
   model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor'):cuda())
   model:add(dofile('master/' .. opt.model .. '.lua'):cuda())
 else
