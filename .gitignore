@@ -4,6 +4,9 @@ luac.out
 # Providers
 *provider.t7
 
+# .DS_STORE
+.DS_STORE
+
 # iTorch checkpoints
 .ipynb_checkpoints/
 
