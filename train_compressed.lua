@@ -27,7 +27,7 @@ cmd:option('-backend', 'cudnn')
 cmd:option('-gpu', 'true')
 cmd:option('-checkpoint', 25)
 cmd:option('-alpha', 0.9, 'High temperature coefficient for knowledge transfer')
-cmd:option('T', 100, 'Temperature for knowledge transfer')
+cmd:option('-T', 100, 'Temperature for knowledge transfer')
 cmd:text()
 
 -- Parse input params
@@ -69,7 +69,7 @@ end
 print(c.blue '==>' ..' configuring model')
 local model = nn.Sequential()
 model:add(nn.BatchFlip():float())
-if gpu == true then
+if opt.gpu == 'true' then
   model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor'):cuda())
   model:add(dofile('compression/' .. opt.model .. '.lua'):cuda())
 else

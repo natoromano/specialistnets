@@ -22,8 +22,8 @@ function DarkKnowledgeCriterion:updateOutput(input, target)
     -- target.scores = raw scores from the master
     local soft_target = self.sm:forward(target.scores:div(self.temp))
     local log_probs = self.lsm:forward(input:div(self.temp))
-    local output = self.ce_crit:forward(input, target.labels):mul(1 - self.alpha)
-    output = output:add(self.kl_crit:forward(log_probs, soft_target):mul(self.alpha))
+    local output = self.ce_crit:forward(input, target.labels) * (1 - self.alpha)
+    output = output + self.kl_crit:forward(log_probs, soft_target) * self.alpha
     return output
 end
 
