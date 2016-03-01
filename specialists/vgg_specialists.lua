@@ -32,7 +32,7 @@ spec:add(MaxPooling(2,2,2,2):ceil())
 spec:add(nn.View(128*4*4))
 spec:add(nn.Linear(128*4*4,256))
 spec:add(nn.ReLU(true))
-spec:add(nn.Linear(256,6))
+spec:add(nn.Linear(256,num_class_specialist))
 
 -- Initialization from MSR
 local function MSRinit(net)

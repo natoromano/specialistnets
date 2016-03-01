@@ -15,6 +15,7 @@ cmd:text('Options')
 cmd:option('-model', 'vgg_specialists')
 cmd:option('-save', 'specialist_logs')
 cmd:option('-domains', 'specialists/domains.t7')
+cmd:option('-index', 1)
 cmd:option('-data', '/mnt/specialist_provider.t7')
 cmd:option('-batchSize', 128)
 cmd:option('-learningRate', 1)
@@ -27,7 +28,7 @@ cmd:option('-backend', 'cudnn')
 cmd:option('-gpu', 'true')
 cmd:option('-checkpoint', 25)
 cmd:option('-alpha', 0.9, 'High temperature coefficient for knowledge transfer')
-cmd:option('T', 100, 'Temperature for knowledge transfer')
+cmd:option('-T', 20, 'Temperature for knowledge transfer')
 cmd:text()
 
 -- Parse input params
@@ -65,26 +66,25 @@ do
   end
 end
 
--- Specialist configuration
+-- Specialist creation
 print(c.blue '==>' ..' creating specialists')
 domains = torch.load(opt.domains)
-models = {}
-for i, classes in pairs(domains) do
-  local model = nn.Sequential()
-  model:add(nn.BatchFlip():float())
-  if gpu == true then
-    model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor'):cuda())
-    model:add(dofile('specialists/' .. opt.model .. '.lua'):cuda())
-  else
-    model:add(nn.Copy('torch.FloatTensor', 'torch.FloatTensor'))
-    model:add(dofile('specialists/' .. opt.model .. '.lua'))
-  end
-  model:get(2).updateGradInput = function(input) return end
+domain = domains[i]
+num_class_specialist = #domain + 1
+local model = nn.Sequential()
+model:add(nn.BatchFlip():float())
+if opt.gpu == 'true' then
+  model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor'):cuda())
+  model:add(dofile('specialists/' .. opt.model .. '.lua'):cuda())
+else
+  model:add(nn.Copy('torch.FloatTensor', 'torch.FloatTensor'))
+  model:add(dofile('specialists/' .. opt.model .. '.lua'))
+end
+model:get(2).updateGradInput = function(input) return end
 
-  if opt.backend == 'cudnn' then
-     cudnn.convert(model:get(3), cudnn)
-  end
-  models{i} = model
+if opt.backend == 'cudnn' then
+   cudnn.convert(model:get(3), cudnn)
+end
 
 -- Data loading
 print(c.blue '==>' ..' loading data')
@@ -92,7 +92,7 @@ provider = torch.load(opt.data)
 provider.trainData.data = provider.trainData.data:float()
 provider.valData.data = provider.valData.data:float()
 
-confusion = optim.ConfusionMatrix(100)
+confusion = optim.ConfusionMatrix(num_class_specialist)
 
 print('Will save at '.. opt.save)
 paths.mkdir(opt.save)
@@ -101,6 +101,7 @@ testLogger:setNames{'% mean class accuracy (train set)',
                     '% mean class accuracy (test set)'}
 testLogger.showPlot = false
 
+--[[ TODO !!!!!! ]]
 parameters, gradParameters = model:getParameters()
 
 print(c.blue'==>' ..' setting criterion')
@@ -119,11 +120,35 @@ optimState = {
 }
 
 
+function populate_lables(input_targets, curr_domain)
+  --- Creates special labels for specialists
+    local output = input_targets:clone():fill(#curr_domain + 1)
+    for i, val in ipairs(curr_domain) do
+        output[targets:eq(val)] = i
+    end
+end
+
+
+function populate_scores(input_scores, curr_domain, method)
+  -- Creates special scores for specialists
+  local raw_scores = input_scores:clone()
+  output_scores = raw_scores:clone()
+  output_scores:resize(raw_scores:size(1), #curr_domain)
+  output_scores:fill(0)
+  for i, val in ipairs(curr_domain) do
+    output_scores[{}, i] = raw_scores[{}, val]
+    if method == 'max' then
+      raw_scores[{}, val] = - math.huge
+    else -- method == 'sum'
+      raw_scores[{}, val] = 0.
+  output_scores[{}, #curr_domain] = raw_scores:max(2)
+  return output_scores
+end
+
+
 function train()
   -- Swith to train mode (flips, dropout, normalization)
-  for i, model in pairs(models) do
-    model:training()
-  end
+  model:training()
   epoch = epoch or 1
 
   -- Drop learning rate every "epoch_step" epochs
@@ -134,10 +159,15 @@ function train()
   print(c.blue '==>'.." online epoch # " .. 
     epoch .. ' [batchSize = ' .. opt.batchSize .. ']')
 
+  targets = {}
   if opt.gpu == 'true' then
-    targets = torch.CudaTensor(opt.batchSize)
+    targets.labels = torch.CudaTensor(opt.batchSize)
+    targets.scores = torch.CudaTensor(opt.batchSize,100)
+    temp = torch.CudaTensor(opt.batchSize)
   else
-    targets = torch.FloatTensor(opt.batchSize)
+    targets.labels = torch.FloatTensor(opt.batchSize)
+    targets.scores = torch.FloatTensor(opt.batchSize,100)
+    temp = torch.FloatTensor(opt.batchSize)
   end
   local indices = torch.randperm(provider.trainData.data:size(1))
   indices = indices:long():split(opt.batchSize)
@@ -150,20 +180,21 @@ function train()
     xlua.progress(t, #indices)
 
     local inputs = provider.trainData.data:index(1,v)
-    targets:copy(provider.trainData.scores:index(1,v))
+    temp:copy(provider.trainData.label:index(1,v))
+    targets.labels = populate_labels(temp, domain[i])
+    targets.scores = populate_scores(provider.trainData.scores:index(1,v), 
+      domain, 'max')
 
     local feval = function(x)
       if x ~= parameters then parameters:copy(x) end
       gradParameters:zero()
       
-      for i, model in pairs(models) do -- FIXME !!!!!!!!!!!!!
-        local outputs = model:forward(inputs)
-        local f = criterion:forward(outputs, targets)
-        local df_do = criterion:backward(outputs, targets)
-        model:backward(inputs, df_do)
-      end
+      local outputs = model:forward(inputs)
+      local f = criterion:forward(outputs, targets)
+      local df_do = criterion:backward(outputs, targets)
+      model:backward(inputs, df_do)
       -- Add results to confusion matrix
-      confusion:batchAdd(outputs, targets) -- ????
+      confusion:batchAdd(outputs, targets)
 
       return f, gradParameters
     end
@@ -182,14 +213,13 @@ end
 
 function test()
   -- Switch to test mode
-  for i, model in pairs(models) do
-    model:evaluate()
-  end
+  model:evaluate()
   print(c.blue '==>'.." testing")
   local bs = 125
   for i=1,provider.valData.data:size(1),bs do
     local outputs = model:forward(provider.valData.data:narrow(1,i,bs))
-    confusion:batchAdd(outputs, provider.valData.label:narrow(1,i,bs))
+    local labels = populate_labels(provider.valData.label:narrow(1,i,bs),domain)
+    confusion:batchAdd(outputs, labels)
   end
 
   confusion:updateValids()
@@ -212,7 +242,7 @@ function test()
     end
 
     -- Create HTML report
-    local file = io.open(opt.save..'/report.html','w')
+    local file = io.open(opt.save..'/report' .. opt.index .. '.html','w')
     file:write(([[
     <!DOCTYPE html>
     <html>
@@ -236,7 +266,7 @@ function test()
 
   -- Save model every 'checkpoint' epochs
   if epoch % opt.checkpoint == 0 then
-    local filename = paths.concat(opt.save, 'model' .. epoch .. '.net')
+    local filename = paths.concat(opt.save, 'sp' .. opt.index .. 'ep '.. epoch .. '.net')
     print(c.blue '==>' .. 'saving model to '.. filename)
     torch.save(filename, model:get(3):clearState())
   end
