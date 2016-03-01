@@ -5,6 +5,7 @@ require 'xlua'
 require 'optim'
 require 'nn'
 dofile 'provider.lua'
+dofile 'custom_criterion.lua'
 local c = require 'trepl.colorize'
 
 -- Parameters
@@ -69,7 +70,7 @@ end
 -- Specialist creation
 print(c.blue '==>' ..' creating specialists')
 domains = torch.load(opt.domains)
-domain = domains[i]
+domain = domains[opt.index]
 num_class_specialist = #domain + 1
 local model = nn.Sequential()
 model:add(nn.BatchFlip():float())
@@ -120,12 +121,13 @@ optimState = {
 }
 
 
-function populate_lables(input_targets, curr_domain)
+function populate_labels(input_targets, curr_domain)
   --- Creates special labels for specialists
     local output = input_targets:clone():fill(#curr_domain + 1)
     for i, val in ipairs(curr_domain) do
-        output[targets:eq(val)] = i
+        output[input_targets:eq(val)] = i
     end
+    return output
 end
 
 
@@ -133,15 +135,17 @@ function populate_scores(input_scores, curr_domain, method)
   -- Creates special scores for specialists
   local raw_scores = input_scores:clone()
   output_scores = raw_scores:clone()
-  output_scores:resize(raw_scores:size(1), #curr_domain)
+  output_scores:resize(raw_scores:size(1), #curr_domain + 1)
   output_scores:fill(0)
   for i, val in ipairs(curr_domain) do
-    output_scores[{}, i] = raw_scores[{}, val]
+    output_scores[{{}, i}] = raw_scores[{{}, val}]
     if method == 'max' then
-      raw_scores[{}, val] = - math.huge
+      raw_scores[{{}, val}] = - math.huge
     else -- method == 'sum'
-      raw_scores[{}, val] = 0.
-  output_scores[{}, #curr_domain] = raw_scores:max(2)
+      raw_scores[{{}, val}] = 0.
+    end
+  end
+  output_scores[{{}, #curr_domain}] = raw_scores:max(2)
   return output_scores
 end
 
@@ -162,11 +166,11 @@ function train()
   targets = {}
   if opt.gpu == 'true' then
     targets.labels = torch.CudaTensor(opt.batchSize)
-    targets.scores = torch.CudaTensor(opt.batchSize,100)
+    targets.scores = torch.CudaTensor(opt.batchSize, num_class_specialist)
     temp = torch.CudaTensor(opt.batchSize)
   else
     targets.labels = torch.FloatTensor(opt.batchSize)
-    targets.scores = torch.FloatTensor(opt.batchSize,100)
+    targets.scores = torch.FloatTensor(opt.batchSize, num_class_specialist)
     temp = torch.FloatTensor(opt.batchSize)
   end
   local indices = torch.randperm(provider.trainData.data:size(1))
@@ -181,9 +185,9 @@ function train()
 
     local inputs = provider.trainData.data:index(1,v)
     temp:copy(provider.trainData.label:index(1,v))
-    targets.labels = populate_labels(temp, domain[i])
-    targets.scores = populate_scores(provider.trainData.scores:index(1,v), 
-      domain, 'max')
+    targets.labels:copy(populate_labels(temp, domain))
+    targets.scores:copy(populate_scores(provider.trainData.scores:index(1,v), 
+      domain, 'max'))
 
     local feval = function(x)
       if x ~= parameters then parameters:copy(x) end
@@ -194,7 +198,7 @@ function train()
       local df_do = criterion:backward(outputs, targets)
       model:backward(inputs, df_do)
       -- Add results to confusion matrix
-      confusion:batchAdd(outputs, targets)
+      confusion:batchAdd(outputs, targets.labels)
 
       return f, gradParameters
     end
