@@ -61,6 +61,7 @@ function Provider:__init(scores, domain)
     if scores ~= nil then
       self.testData.scores = self.testData.scores[{ {1, tesize} }]
     end
+    
   else
     --[[ Train Data: Select parts of the data such that it is composed of 50% 
     specialist labels and 50% dustbin labels]]
@@ -68,15 +69,18 @@ function Provider:__init(scores, domain)
     self.trainData = {}
     local mask = torch.ByteTensor(trsize):fill(0)
     -- Create mask to choose the right data
-    for i, val in ipairs(domain)
+    for i, val in ipairs(domain) do
       mask = mask + fullTrainData.label:eq(val)
     end
     local indices = torch.linspace(1,trsize,trsize):long()
-    mask:index(1,torch.randperm(indices[mask:eq(0)])[{{1, mask:gt(0):sum()}}] = 1
-    local selected = indices[mask:gt(0)]
+    local N = mask:eq(0):sum() -- number of examples where mask == 0
+    local M = mask:eq(1):sum() -- number of examples where mask > 1
+    mask[mask:eq(0)] = torch.rand(N):lt(M/N)
+    local selected = indices[mask:eq(1)]
     self.trainData.data = fullTrainData.data:index(1,selected):type('torch.FloatTensor')
     self.trainData.label = populate_labels(fullTrainData.label:index(1,selected), domain)
     self.trainData.scores = populate_scores(scores.train:index(1,selected), domain)
+    self.trainData.size = function() return self.trainData.data:size(1) end
     
     --[[ Val Data: Select parts of the data such that it is composed of 50% 
     specialist labels and 50% dustbin labels]]
@@ -84,15 +88,18 @@ function Provider:__init(scores, domain)
     self.valData = {}
     local mask = torch.ByteTensor(vlsize):fill(0)
     -- Create mask to choose the right data
-    for i, val in ipairs(domain)
+    for i, val in ipairs(domain) do
       mask = mask + fullValData.label:eq(val)
     end
     local indices = torch.linspace(1,vlsize,vlsize):long()
-    mask:index(1,torch.randperm(indices[mask:eq(0)])[{{1, mask:gt(0):sum()}}] = 1
-    local selected = indices[mask:gt(0)]
+    local N = mask:eq(0):sum() -- number of examples where mask == 0
+    local M = mask:eq(1):sum() -- number of examples where mask > 1
+    mask[mask:eq(0)] = torch.rand(N):lt(M/N)
+    local selected = indices[mask:eq(1)]
     self.valData.data = fullValData.data:index(1,selected):type('torch.FloatTensor')
     self.valData.label = populate_labels(fullValData.label:index(1,selected), domain)
     self.valData.scores = populate_scores(scores.val:index(1,selected), domain)
+    self.valData.size = function() return self.valData.data:size(1) end
     
     --[[ Test Data: Select parts of the data such that it is composed of 50% 
     specialist labels and 50% dustbin labels]]
@@ -100,15 +107,18 @@ function Provider:__init(scores, domain)
     self.testData = {}
     local mask = torch.ByteTensor(tesize):fill(0)
     -- Create mask to choose the right data
-    for i, val in ipairs(domain)
+    for i, val in ipairs(domain) do
       mask = mask + fullTestData.label:eq(val)
     end
     local indices = torch.linspace(1,tesize,tesize):long()
-    mask:index(1,torch.randperm(indices[mask:eq(0)])[{{1, mask:gt(0):sum()}}] = 1
-    local selected = indices[mask:gt(0)]
+    local N = mask:eq(0):sum() -- number of examples where mask == 0
+    local M = mask:eq(1):sum() -- number of examples where mask > 1
+    mask[mask:eq(0)] = torch.rand(N):lt(M/N)
+    local selected = indices[mask:eq(1)]
     self.testData.data = fullTestData.data:index(1,selected):type('torch.FloatTensor')
     self.testData.label = populate_labels(fullTestData.label:index(1,selected), domain)
     self.testData.scores = populate_scores(scores.test:index(1,selected), domain)
+    self.testData.size = function() return self.testData.data:size(1) end
   end
 end
 
