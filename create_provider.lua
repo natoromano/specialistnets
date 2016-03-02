@@ -14,6 +14,7 @@ cmd:option('-target', 'specialists', 'Target should be specialists or master')
 cmd:option('-path', '/mnt', 'Path to save the provider')
 cmd:option('-scores', 'master/master_scores.t7', 'Path to master scores')
 cmd:option('-backend', 'cudnn')
+cmd:option('-domains', 'specialists/domains.t7')
 cmd:text()
 
 -- Parse input params
@@ -45,12 +46,16 @@ end
 
 -- Specialist provider creation (same but with scores)
 if opt.target == 'specialists' then
+  domains = torch.load(opt.domains)
 	scores = torch.load(opt.scores)
-	provider = Provider(scores)
-	provider:normalize()
+	
 	-- Change permissions on temp mnt/ directory on AWS
 	if string.find(opt.path, 'mnt') then
 		os.execute('sudo chmod 777 ' .. opt.path)
 	end
-	torch.save(opt.path .. '/specialist_provider.t7', provider)
+	for i, domain in ipairs(domains) do
+	  provider = Provider(scores, domain)
+	  provider:normalize()
+    torch.save(opt.path .. '/specialist' .. i .. '_provider.t7', provider)
+  end
 end
