@@ -107,9 +107,9 @@ parameters, gradParameters = model:getParameters()
 
 print(c.blue'==>' ..' setting criterion')
 if opt.gpu == 'true' then
-  criterion = DarkKnowledgeCriterion(opt.T, opt.alpha):cuda()
+  criterion = DarkKnowledgeCriterion(opt.alpha, opt.T):cuda()
 else
-  criterion = DarkKnowledgeCriterion(opt.T, opt.alpha)
+  criterion = DarkKnowledgeCriterion(opt.alpha, opt.T)
 end
 
 print(c.blue'==>' ..' configuring optimizer')
@@ -145,7 +145,7 @@ function populate_scores(input_scores, curr_domain, method)
       raw_scores[{{}, val}] = 0.
     end
   end
-  output_scores[{{}, #curr_domain}] = raw_scores:max(2)
+  output_scores[{{}, #curr_domain + 1}] = raw_scores:max(2)
   return output_scores
 end
 
@@ -188,7 +188,7 @@ function train()
     targets.labels:copy(populate_labels(temp, domain))
     targets.scores:copy(populate_scores(provider.trainData.scores:index(1,v), 
       domain, 'max'))
-
+    
     local feval = function(x)
       if x ~= parameters then parameters:copy(x) end
       gradParameters:zero()
