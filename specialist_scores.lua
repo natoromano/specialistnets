@@ -40,17 +40,17 @@ function compute_scores(model, inputData, dim_output)
 	--[[ Takes a trained model and a data object and returns the model's raw 
 	scores on the data
 	inputData must have a field .data, and a :size() method. ]]--
-	local output = {}
+	-- local output = {}
 	local scores = torch.FloatTensor(inputData:size(), dim_output):zero()
 	local bs = 125  -- batch size for forward pass
 	for i = 1, inputData.data:size(1), bs do
 		if opt.backend == 'cudnn' or opt.backend == 'cunn' then
-			output.data = inputData.data:narrow(1, i, bs):cuda()
+			data = inputData.data:narrow(1, i, bs):cuda()
 		else
-			output.data = inputData.data:narrow(1, i, bs)
+			data = inputData.data:narrow(1, i, bs)
 		end
 		local outputs = model:forward(data):float()
-		output.scores[{{i, i+bs-1}}] = outputs
+		scores[{{i, i+bs-1}}] = outputs
 	end
 	return scores
 end
@@ -73,19 +73,19 @@ provider = torch.load(opt.data .. '/master_provider.t7')
 for i=1,opt.specialists do
 	print(c.blue '==>'.." computing scores for specialist" .. i .. "...")
 	-- load model
-	model = torch.load(opt.models + '/sp' .. i .. 'ep' .. opt.epochs .. '.net')
+	model = torch.load(opt.models .. '/sp' .. i .. 'ep' .. opt.epochs .. '.net')
 	-- Compute scores
 	local dim = 6 -- FIXME
 	train[{{},{i, i+dim-1}}] = compute_scores(model, provider.trainData, dim)
 	val[{{},{i, i+dim-1}}] = compute_scores(model, provider.valData, dim)
-	test[{{},{i, i+dim-1)}] = compute_scores(model, provider.testData, dim)
+	test[{{},{i, i+dim-1}}] = compute_scores(model, provider.testData, dim)
 end
 
 -- Save scores
 function populate_scores(outputTable, setName, setScores)
-	scores[outputTable] = {}
-	scores[outputTable].data = setScores
-	scores[outputTable].label = provider[setName].label
+	outputTable[setName] = {}
+	outputTable[setName].data = setScores
+	outputTable[setName].label = provider[setName].label
 end
 
 scores = {}

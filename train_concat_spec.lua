@@ -26,7 +26,7 @@ cmd:option('-max_epoch', 150)
 cmd:option('-backend', 'cudnn')
 cmd:option('-gpu', 'true')
 cmd:option('-checkpoint', 25)
-cmd:option('-data', '/mnt')
+cmd:option('-data', 'specialists')
 cmd:text()
 
 -- Parse input params
@@ -40,16 +40,18 @@ end
 print(c.blue '==>' ..' configuring model')
 local model = nn.Sequential()
 if opt.gpu == 'true' then
-  model:add(nn.Linear(opt.input_dim,100)):cuda())
+  model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor'):cuda())
+  model:add(nn.Linear(opt.input_dim,100)):cuda()
 else
+  model:add(nn.Copy('torch.FloatTensor', 'torch.FloatTensor'))
   model:add(nn.Linear(opt.input_dim,100))
 end
-model:get(2).updateGradInput = function(input) return end
+-- model:get(2).updateGradInput = function(input) return end
 
 if opt.backend == 'cudnn' then
    require 'cudnn'
    cudnn.fastest, cudnn.benchmark = true, true
-   cudnn.convert(model:get(3), cudnn)
+   cudnn.convert(model:get(2), cudnn)
 end
 
 -- Data loading
@@ -59,7 +61,7 @@ if string.find(opt.data, 'mnt') then
 end
 
 
-provider = torch.load(opt.data .. '/?????_provider.t7')
+provider = torch.load(opt.data .. '/specialist_scores.t7')
 provider.trainData.data = provider.trainData.data:float()
 provider.valData.data = provider.valData.data:float()
 
@@ -89,7 +91,6 @@ optimState = {
   learningRateDecay = opt.learningRateDecay,
 }
 
-
 function train()
   -- Swith to train mode (flips, dropout, normalization)
   model:training()
@@ -111,7 +112,8 @@ function train()
   local indices = torch.randperm(provider.trainData.data:size(1))
   indices = indices:long():split(opt.batchSize)
   -- Remove last element so that all the batches have equal size
-  indices[#indices] = nil
+  --indices[#indices] = nil
+  -- /!\ ALWAYS HAVE A BATCHSIZE SUCH THAT BS | 40000
 
   local tic = torch.tic()
   -- Iterate over batches
@@ -204,7 +206,7 @@ function test()
   if epoch % opt.checkpoint == 0 then
     local filename = paths.concat(opt.save, 'model' .. epoch .. '.net')
     print(c.blue '==>' .. 'saving model to '.. filename)
-    torch.save(filename, model:get(3):clearState())
+    torch.save(filename, model:get(2):clearState())
   end
 
   confusion:zero()
