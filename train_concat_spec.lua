@@ -26,7 +26,7 @@ cmd:option('-max_epoch', 150)
 cmd:option('-backend', 'cudnn')
 cmd:option('-gpu', 'true')
 cmd:option('-checkpoint', 25)
-cmd:option('-data', '/mnt')
+cmd:option('-data', 'specialists')
 cmd:text()
 
 -- Parse input params
@@ -59,9 +59,9 @@ if string.find(opt.data, 'mnt') then
 end
 
 
-provider = torch.load(opt.data .. '/?????_provider.t7')
-provider.trainData.data = provider.trainData.data:float()
-provider.valData.data = provider.valData.data:float()
+data = torch.load(opt.data .. '/specialists_scores.t7')
+data.trainData.data = data.trainData.data:float()
+data.valData.data = data.valData.data:float()
 
 confusion = optim.ConfusionMatrix(100)
 
