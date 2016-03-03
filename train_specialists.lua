@@ -192,8 +192,11 @@ function test()
   print(c.blue '==>'.." testing")
   local bs = 125
   for i=1,provider.valData.data:size(1),bs do
+    if i> provider.valData.data:size(1)-bs then
+	i = provider.valData.data:size(1)-bs
+    end
     local outputs = model:forward(provider.valData.data:narrow(1,i,bs))
-    local labels = provider.valData.label:narrow(1,i,bs),domain)
+    local labels = provider.valData.label:narrow(1,i,bs)
     confusion:batchAdd(outputs, labels)
   end
 

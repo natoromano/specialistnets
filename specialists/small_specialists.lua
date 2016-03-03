@@ -10,6 +10,7 @@ local spec = nn.Sequential()
 -- Building block
 local function ConvBNReLU(nInputPlane, nOutputPlane)
   spec:add(nn.SpatialConvolution(nInputPlane, nOutputPlane, 3,3, 1,1, 1,1))
+  spec:add(nn.SpatialBatchNormalization(nOutputPlane, 1e-3))
   spec:add(nn.ReLU(true))
   return spec
 end
@@ -26,7 +27,7 @@ ConvBNReLU(32,64):add(nn.Dropout(0.4))
 spec:add(MaxPooling(2,2,2,2):ceil())
 ConvBNReLU(64,128):add(nn.Dropout(0.4))
 spec:add(MaxPooling(2,2,2,2):ceil())
-ConvBNReLU(64,128):add(nn.Dropout(0.4))
+ConvBNReLU(128,128):add(nn.Dropout(0.4))
 spec:add(nn.View(128*2*2))
 spec:add(nn.Linear(128*2*2,128))
 spec:add(nn.BatchNormalization(128))
