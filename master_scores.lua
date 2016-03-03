@@ -8,7 +8,7 @@ local c = require 'trepl.colorize'
 
 -- Parameters
 cmd = torch.CmdLine()
-cmd:text('Create provider')
+cmd:text('Dump master scores')
 cmd:text()
 cmd:text('Options')
 cmd:option('-path', 'master/master_scores.t7', 'Path to save the scores')

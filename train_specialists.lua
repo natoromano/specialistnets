@@ -245,7 +245,7 @@ function test()
 
   -- Save model every 'checkpoint' epochs
   if epoch % opt.checkpoint == 0 then
-    local model_name = 'sp' .. opt.index .. 'ep '.. epoch .. '.net'
+    local model_name = 'sp' .. opt.index .. 'ep' .. epoch .. '.net'
     local filename = paths.concat(opt.save, model_name)
     print(c.blue '==>' .. 'saving model to '.. filename)
     torch.save(filename, model:get(3):clearState())
