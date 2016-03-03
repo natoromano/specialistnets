@@ -44,6 +44,7 @@ if opt.backend == 'cudnn' then
 end
 
 -- Data augmentation
+-- Thanks to Sergey Zagoruyko, cf https://github.com/szagoruyko/cifar.torch
 do 
   local BatchFlip, parent = torch.class('nn.BatchFlip', 'nn.Module')
 
@@ -205,6 +206,7 @@ function test()
     end
 
     -- Create HTML report
+    -- Thanks to Sergey Zagoruyko, cf https://github.com/szagoruyko/cifar.torch
     local file = io.open(opt.save..'/report.html','w')
     file:write(([[
     <!DOCTYPE html>

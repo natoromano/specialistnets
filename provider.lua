@@ -1,6 +1,6 @@
 --[[ Provider to load and pre-process CIFAR-100 data.
 
-This code is widely inspired by Sergey Zagoruyko, 
+This code is inspired by Sergey Zagoruyko, 
 cf https://github.com/szagoruyko/cifar.torch ]]--
 
 -- Imports
@@ -152,6 +152,7 @@ end
 
 
 function Provider:normalize()
+  -- Thanks to Sergey Zagoruyko, cf https://github.com/szagoruyko/cifar.torch
   local trainData = self.trainData
   local valData = self.valData
   local testData = self.testData

@@ -1,7 +1,7 @@
 --[[ Code to train a master VGGNet on CIFAR-100 (or any training data in a
 provider file).
 
-This code is widely inspired by Sergey Zagoruyko, cf 
+This code is inspired by Sergey Zagoruyko, cf 
 https://github.com/szagoruyko/cifar.torch ]]--
 
 -- Imports
@@ -40,6 +40,7 @@ if opt.gpu == 'true' then
 end
 
 -- Data augmentation
+-- Thanks to Sergey Zagoruyko, cf https://github.com/szagoruyko/cifar.torch
 do 
   local BatchFlip, parent = torch.class('nn.BatchFlip', 'nn.Module')
 
@@ -203,6 +204,7 @@ function test()
     end
 
     -- Create HTML report
+    -- Thanks to Sergey Zagoruyko, cf https://github.com/szagoruyko/cifar.torch
     local file = io.open(opt.save..'/report.html','w')
     file:write(([[
     <!DOCTYPE html>

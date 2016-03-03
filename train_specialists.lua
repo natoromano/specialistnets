@@ -17,7 +17,7 @@ cmd:option('-model', 'vgg_specialists')
 cmd:option('-save', 'specialist_logs')
 cmd:option('-domains', 'specialists/domains.t7')
 cmd:option('-index', 1)
-cmd:option('-data', '/mnt/specialist_provider.t7')
+cmd:option('-data', 'default')
 cmd:option('-batchSize', 128)
 cmd:option('-learningRate', 1)
 cmd:option('-learningRateDecay', 1e-7)
@@ -27,13 +27,16 @@ cmd:option('-epoch_step', 25)
 cmd:option('-max_epoch', 150)
 cmd:option('-backend', 'cudnn')
 cmd:option('-gpu', 'true')
-cmd:option('-checkpoint', 25)
+cmd:option('-checkpoint', 100)
 cmd:option('-alpha', 0.9, 'High temperature coefficient for knowledge transfer')
 cmd:option('-T', 20, 'Temperature for knowledge transfer')
 cmd:text()
 
 -- Parse input params
 local opt = cmd:parse(arg)
+if opt.data == 'default' then
+  opt.data = '/mnt/specialist' .. opt.index .. '_provider.t7'
+end
 
 -- Import cunn if GPU
 if opt.gpu == 'true' then
@@ -46,6 +49,7 @@ if opt.backend == 'cudnn' then
 end
 
 -- Data augmentation
+-- Thanks to Sergey Zagoruyko, cf https://github.com/szagoruyko/cifar.torch
 do 
   local BatchFlip, parent = torch.class('nn.BatchFlip', 'nn.Module')
 
@@ -121,35 +125,6 @@ optimState = {
 }
 
 
-function populate_labels(input_targets, curr_domain)
-  --- Creates special labels for specialists
-    local output = input_targets:clone():fill(#curr_domain + 1)
-    for i, val in ipairs(curr_domain) do
-        output[input_targets:eq(val)] = i
-    end
-    return output
-end
-
-
-function populate_scores(input_scores, curr_domain, method)
-  -- Creates special scores for specialists
-  local raw_scores = input_scores:clone()
-  output_scores = raw_scores:clone()
-  output_scores:resize(raw_scores:size(1), #curr_domain + 1)
-  output_scores:fill(0)
-  for i, val in ipairs(curr_domain) do
-    output_scores[{{}, i}] = raw_scores[{{}, val}]
-    if method == 'max' then
-      raw_scores[{{}, val}] = - math.huge
-    else -- method == 'sum'
-      raw_scores[{{}, val}] = 0.
-    end
-  end
-  output_scores[{{}, #curr_domain + 1}] = raw_scores:max(2)
-  return output_scores
-end
-
-
 function train()
   -- Swith to train mode (flips, dropout, normalization)
   model:training()
@@ -167,11 +142,9 @@ function train()
   if opt.gpu == 'true' then
     targets.labels = torch.CudaTensor(opt.batchSize)
     targets.scores = torch.CudaTensor(opt.batchSize, num_class_specialist)
-    temp = torch.CudaTensor(opt.batchSize)
   else
     targets.labels = torch.FloatTensor(opt.batchSize)
     targets.scores = torch.FloatTensor(opt.batchSize, num_class_specialist)
-    temp = torch.FloatTensor(opt.batchSize)
   end
   local indices = torch.randperm(provider.trainData.data:size(1))
   indices = indices:long():split(opt.batchSize)
@@ -184,10 +157,8 @@ function train()
     xlua.progress(t, #indices)
 
     local inputs = provider.trainData.data:index(1,v)
-    temp:copy(provider.trainData.label:index(1,v))
-    targets.labels:copy(populate_labels(temp, domain))
-    targets.scores:copy(populate_scores(provider.trainData.scores:index(1,v), 
-      domain, 'max'))
+    targets.labels:copy(provider.trainData.label:index(1,v))
+    targets.scores:copy(provider.trainData.scores:index(1,v))
     
     local feval = function(x)
       if x ~= parameters then parameters:copy(x) end
@@ -222,7 +193,7 @@ function test()
   local bs = 125
   for i=1,provider.valData.data:size(1),bs do
     local outputs = model:forward(provider.valData.data:narrow(1,i,bs))
-    local labels = populate_labels(provider.valData.label:narrow(1,i,bs),domain)
+    local labels = provider.valData.label:narrow(1,i,bs),domain)
     confusion:batchAdd(outputs, labels)
   end
 
@@ -246,6 +217,7 @@ function test()
     end
 
     -- Create HTML report
+    -- Thanks to Sergey Zagoruyko, cf https://github.com/szagoruyko/cifar.torch
     local file = io.open(opt.save..'/report' .. opt.index .. '.html','w')
     file:write(([[
     <!DOCTYPE html>
@@ -270,7 +242,8 @@ function test()
 
   -- Save model every 'checkpoint' epochs
   if epoch % opt.checkpoint == 0 then
-    local filename = paths.concat(opt.save, 'sp' .. opt.index .. 'ep '.. epoch .. '.net')
+    local model_name = 'sp' .. opt.index .. 'ep '.. epoch .. '.net'
+    local filename = paths.concat(opt.save, model_name)
     print(c.blue '==>' .. 'saving model to '.. filename)
     torch.save(filename, model:get(3):clearState())
   end
