@@ -10,7 +10,7 @@ local c = require 'trepl.colorize'
 
 -- Parameters
 cmd = torch.CmdLine()
-cmd:text('Train spcialist networks')
+cmd:text('Train specialist networks')
 cmd:text()
 cmd:text('Options')
 cmd:option('-model', 'vgg_specialists')
@@ -29,7 +29,7 @@ cmd:option('-backend', 'cudnn')
 cmd:option('-gpu', 'true')
 cmd:option('-checkpoint', 100)
 cmd:option('-alpha', 0.9, 'High temperature coefficient for knowledge transfer')
-cmd:option('-T', 20, 'Temperature for knowledge transfer')
+cmd:option('-T', 50, 'Temperature for knowledge transfer')
 cmd:text()
 
 -- Parse input params

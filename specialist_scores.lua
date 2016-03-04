@@ -76,9 +76,9 @@ for i=1,opt.specialists do
 	model = torch.load(opt.models .. '/sp' .. i .. 'ep' .. opt.epochs .. '.net')
 	-- Compute scores
 	local dim = 6 -- FIXME
-	train[{{},{i, i+dim-1}}] = compute_scores(model, provider.trainData, dim)
-	val[{{},{i, i+dim-1}}] = compute_scores(model, provider.valData, dim)
-	test[{{},{i, i+dim-1}}] = compute_scores(model, provider.testData, dim)
+	train[{{},{i, (i+1)dim}}] = compute_scores(model, provider.trainData, dim)
+	val[{{},{i, i+dim}}] = compute_scores(model, provider.valData, dim)
+	test[{{},{i, i+dim}}] = compute_scores(model, provider.testData, dim)
 end
 
 -- Save scores
