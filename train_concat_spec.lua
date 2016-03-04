@@ -61,15 +61,9 @@ if string.find(opt.data, 'mnt') then
 end
 
 
-<<<<<<< HEAD
 provider = torch.load(opt.data .. '/specialist_scores.t7')
 provider.trainData.data = provider.trainData.data:float()
 provider.valData.data = provider.valData.data:float()
-=======
-data = torch.load(opt.data .. '/specialists_scores.t7')
-data.trainData.data = data.trainData.data:float()
-data.valData.data = data.valData.data:float()
->>>>>>> db8868aaa0e191a513b1c945aaab2b448e21b572
 
 confusion = optim.ConfusionMatrix(100)
 
