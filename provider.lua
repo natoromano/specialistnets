@@ -71,7 +71,7 @@ function Provider:__init(scores, domain)
     local mask = torch.ByteTensor(trsize):fill(0)
     -- Create mask to choose the right data
     for i, val in ipairs(domain) do
-      mask = mask + label:eq(val)
+      mask = mask + labels:eq(val)
     end
     local indices = torch.linspace(1,trsize,trsize):long()
     local N = mask:eq(0):sum() -- number of examples where mask == 0
