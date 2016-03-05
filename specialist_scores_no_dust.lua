@@ -85,6 +85,7 @@ for i, domain in pairs(domains) do
 	  train[{{},{class}}] = sp_train[{{},{j}}]
 	  val[{{},{class}}] = sp_val[{{},{j}}]
 	  test[{{},{class}}] = sp_test[{{},{j}}]
+	end
 end
 
 -- Save scores

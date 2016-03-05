@@ -133,11 +133,6 @@ if testLogger then
   <h4>optimState:</h4>
   <table>
   ]]):format(opt.save,epoch,base64im))
-  for k,v in pairs(optimState) do
-    if torch.type(v) == 'number' then
-      file:write('<tr><td>'..k..'</td><td>'..v..'</td></tr>\n')
-    end
-  end
   file:write'</table><pre>\n'
   file:write(tostring(confusion)..'\n')
   file:write(tostring(model)..'\n')
