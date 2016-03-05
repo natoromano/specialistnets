@@ -13,7 +13,7 @@ cmd:text()
 cmd:text('Options')
 cmd:option('-path', 'specialists/specialist_scores.t7', 'Path to save scores')
 cmd:option('-models', '/mnt', 'Path to the specialist models')
-cmd:option('-specialists', 9, 'Number of specialists')
+cmd:option('-domains', 'specialists/new.t7', 'Path to domains')
 cmd:option('-epochs', 150, 'Number of epochs specialists were trained with')
 cmd:option('-data', '/mnt', 'Path to master provider')
 cmd:option('-backend', 'cudnn')
@@ -59,7 +59,8 @@ end
 os.execute('sudo chmod 777 ' .. opt.data)
 
 -- number of output classes
-local n_classes = 100 + opt.specialists
+domains = torch.load(opt.domains)
+local n_classes = 100 + #domains
 
 -- initialize score tensors
 local train = torch.FloatTensor(40000, n_classes)
@@ -71,16 +72,15 @@ provider = torch.load(opt.data .. '/master_provider.t7')
 
 -- compute scores
 local id = 0
-domains = torch.load(opt.domains)
 for i, domain in pairs(domains) do
 	print(c.blue '==>'.." computing scores for specialist" .. i .. "...")
 	-- load model
 	model = torch.load(opt.models .. '/sp' .. i .. 'ep' .. opt.epochs .. '.net')
 	-- Compute scores
 	local dim = #domain + 1
-	train[{{},{(id+1, id+dim}}] = compute_scores(model, provider.trainData, dim)
-	val[{{},{(id,+1 id+dim}}] = compute_scores(model, provider.valData, dim)
-	test[{{},{(id+1, id+dim}}] = compute_scores(model, provider.testData, dim)
+	train[{{},{id+1, id+dim}}] = compute_scores(model, provider.trainData, dim)
+	val[{{},{id+1, id+dim}}] = compute_scores(model, provider.valData, dim)
+	test[{{},{id+1, id+dim}}] = compute_scores(model, provider.testData, dim)
 	id = id + dim
 end
 
