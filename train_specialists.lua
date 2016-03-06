@@ -5,6 +5,7 @@ require 'xlua'
 require 'optim'
 require 'nn'
 dofile 'provider.lua'
+dofile 'unsupervised_provider.lua'
 dofile 'custom_criterion.lua'
 local c = require 'trepl.colorize'
 
@@ -30,6 +31,8 @@ cmd:option('-gpu', 'true')
 cmd:option('-checkpoint', 100)
 cmd:option('-alpha', 0.9, 'High temperature coefficient for knowledge transfer')
 cmd:option('-T', 50, 'Temperature for knowledge transfer')
+cmd:option('-unsupervised', false, 'Enable unsupervised learning')
+cmd:option('-unsup_epochs', 50, 'Number of unsupervised learning epochs')
 cmd:text()
 
 -- Parse input params
@@ -72,7 +75,7 @@ do
 end
 
 -- Specialist creation
-print(c.blue '==>' ..' creating specialists')
+print(c.blue '==>' ..' creating specialist ' .. opt.index)
 domains = torch.load(opt.domains)
 domain = domains[opt.index]
 num_class_specialist = #domain + 1
@@ -136,7 +139,7 @@ function train()
   end
   
   print(c.blue '==>'.." online epoch # " .. 
-    epoch .. ' [batchSize = ' .. opt.batchSize .. ']')
+    epoch .. ' [batchSize = ' .. opt.batchSize .. '] specialist ' .. opt.index)
 
   targets = {}
   if opt.gpu == 'true' then
@@ -254,8 +257,83 @@ function test()
   confusion:zero()
 end
 
---> Actual training script
+-- Actual training script
 for i=1,opt.max_epoch do
   train()
   test()
+end
+
+-- Unsupervised learning
+function train_unsupervised()
+  -- Swith to train mode (flips, dropout, normalization)
+  model:training()
+  epoch = epoch or 1
+
+  -- Drop learning rate every "epoch_step" epochs
+  if epoch % opt.epoch_step == 0 then 
+    optimState.learningRate = optimState.learningRate / 2 
+  end
+  
+  print(c.blue '==>'.." online unsupervised epoch # " .. 
+    epoch .. ' [batchSize = ' .. opt.batchSize .. '] specialist ' .. opt.index)
+
+  targets = {}
+  if opt.gpu == 'true' then
+    targets.labels = torch.CudaTensor(opt.batchSize)
+    targets.scores = torch.CudaTensor(opt.batchSize, num_class_specialist)
+  else
+    targets.labels = torch.FloatTensor(opt.batchSize)
+    targets.scores = torch.FloatTensor(opt.batchSize, num_class_specialist)
+  end
+  local indices = torch.randperm(provider.trainData.data:size(1))
+  indices = indices:long():split(opt.batchSize)
+  -- Remove last element so that all the batches have equal size
+  indices[#indices] = nil
+
+  local tic = torch.tic()
+  -- Iterate over batches
+  for t,v in ipairs(indices) do
+    xlua.progress(t, #indices)
+
+    local inputs = provider.trainData.data:index(1,v)
+    targets.labels:fill(-1)
+    targets.scores:copy(provider.trainData.scores:index(1,v))
+    
+    local feval = function(x)
+      if x ~= parameters then parameters:copy(x) end
+      gradParameters:zero()
+      
+      local outputs = model:forward(inputs)
+      local f = criterion:forward(outputs, targets)
+      local df_do = criterion:backward(outputs, targets)
+      model:backward(inputs, df_do)
+      -- Add results to confusion matrix
+      confusion:batchAdd(outputs, targets.labels)
+
+      return f, gradParameters
+    end
+    optim.sgd(feval, parameters, optimState)
+  end
+
+  confusion:updateValids()
+  print(('Train accuracy: '..c.cyan'%.2f'..' %%\t time: %.2f s'):format(
+        confusion.totalValid * 100, torch.toc(tic)))
+  train_acc = confusion.totalValid * 100
+
+  confusion:zero()
+  epoch = epoch + 1
+end
+
+if opt.unsupervised == true then
+  print(c.blue'==>' ..' setting unsupervised criterion')
+  if opt.gpu == 'true' then
+    criterion = DarkKnowledgeCriterion(1.0, opt.T):cuda()
+  else
+    criterion = DarkKnowledgeCriterion(1.0, opt.T)
+  end
+
+  for i=1,opt.unsup_epochs do
+    train_unsupervised()
+    test()
+  end
 end

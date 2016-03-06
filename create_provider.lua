@@ -4,6 +4,7 @@
 require 'xlua'
 require 'nn'
 dofile 'provider.lua'
+dofile 'unsupervised_provider.lua'
 
 -- Parameters
 cmd = torch.CmdLine()
@@ -11,6 +12,10 @@ cmd:text('Create provider')
 cmd:text()
 cmd:text('Options')
 cmd:option('-target', 'specialists', 'Target should be specialists or master')
+cmd:option('-method', 'supervised', 'Should be supervised or unsupervised')
+cmd:option('-provider', 'master/master_provider.t7', 
+	'Path to master (or specialist) provider for normalization constants')
+cmd:option('-size', 20000, 'Size of unsupervised training set')
 cmd:option('-path', '/mnt', 'Path to save the provider')
 cmd:option('-scores', 'master/master_scores.t7', 'Path to master scores')
 cmd:option('-backend', 'cudnn')
@@ -33,41 +38,87 @@ if opt.backpend == 'cunn' then
 	require 'cutorch'
 end
 
--- Master provider creation
-if opt.target == 'master' then
-	provider = Provider()
-	provider:normalize()
-	-- Change permissions on temp mnt/ directory on AWS
-	if string.find(opt.path, 'mnt') then
-		os.execute('sudo chmod 777 ' .. opt.path)
+if opt.method == 'supervised' then
+	-- Master provider creation
+	if opt.target == 'master' then
+		provider = Provider()
+		provider:normalize()
+		-- Change permissions on temp mnt/ directory on AWS
+		if string.find(opt.path, 'mnt') then
+			os.execute('sudo chmod 777 ' .. opt.path)
+		end
+		torch.save(opt.path .. '/master_provider.t7', provider)
 	end
-	torch.save(opt.path .. '/master_provider.t7', provider)
-end
 
--- Compressed model provider creation
-if opt.target == 'compressed' then
-  scores = torch.load(opt.scores)
-	provider = Provider(scores)
-	provider:normalize()
-	-- Change permissions on temp mnt/ directory on AWS
-	if string.find(opt.path, 'mnt') then
-		os.execute('sudo chmod 777 ' .. opt.path)
-	end
-	torch.save(opt.path .. '/compressed_provider.t7', provider)
-end
+	if opt.target == 'compressed' then
+	  scores = torch.load(opt.scores)
+		provider = Provider(scores)
+		provider:normalize()
+		-- Change permissions on temp mnt/ directory on AWS
+		if string.find(opt.path, 'mnt') then
+			os.execute('sudo chmod 777 ' .. opt.path)
+		end
+		torch.save(opt.path .. '/compressed_provider.t7', provider)
+	end	
 
--- Specialist provider creation (same but with scores)
-if opt.target == 'specialists' then
-  domains = torch.load(opt.domains)
-	scores = torch.load(opt.scores)
-	
-	-- Change permissions on temp mnt/ directory on AWS
-	if string.find(opt.path, 'mnt') then
-		os.execute('sudo chmod 777 ' .. opt.path)
+	-- Specialist provider creation (same but with scores)
+	if opt.target == 'specialists' then
+	  domains = torch.load(opt.domains)
+		scores = torch.load(opt.scores)
+		
+		-- Change permissions on temp mnt/ directory on AWS
+		if string.find(opt.path, 'mnt') then
+			os.execute('sudo chmod 777 ' .. opt.path)
+		end
+		for i, domain in ipairs(domains) do
+		  provider = Provider(scores, domain)
+		  provider:normalize()
+	    torch.save(opt.path .. '/specialist' .. i .. '_provider.t7', provider)
+	  end
 	end
-	for i, domain in ipairs(domains) do
-	  provider = Provider(scores, domain)
-	  provider:normalize()
-    torch.save(opt.path .. '/specialist' .. i .. '_provider.t7', provider)
-  end
+
+else
+	norm_provider = torch.load(opt.provider)
+	normalization = {}
+	normalization.mean_u = norm_provider.trainData.mean_u
+	normalization.std_u = norm_provider.trainData.std_u
+	normalization.mean_v = norm_provider.trainData.mean_v
+	normalization.std_v = norm_provider.trainData.std_v
+	-- Master provider creation
+	if opt.target == 'master' then
+		provider = UProvider(opt.size, opt.normalization)
+		provider:normalize()
+		-- Change permissions on temp mnt/ directory on AWS
+		if string.find(opt.path, 'mnt') then
+			os.execute('sudo chmod 777 ' .. opt.path)
+		end
+		torch.save(opt.path .. '/master_provider.t7', provider)
+	end
+
+	-- Specialist provider creation (same but with scores)
+	if opt.target == 'specialists' then
+	    domains = torch.load(opt.domains)
+		scores = torch.load(opt.scores)
+		
+		-- Change permissions on temp mnt/ directory on AWS
+		if string.find(opt.path, 'mnt') then
+			os.execute('sudo chmod 777 ' .. opt.path)
+		end
+		for i, domain in ipairs(domains) do
+		  provider = Provider(opt.size, opt.normalization, scores, domain)
+		  provider:normalize()
+	    torch.save(opt.path .. '/specialist' .. i .. '_provider.t7', provider)
+	  end
+	end	
+
+	if opt.target == 'compressed' then
+	  	scores = torch.load(opt.scores)
+		provider = Provider(scores)
+		provider:normalize()
+		-- Change permissions on temp mnt/ directory on AWS
+		if string.find(opt.path, 'mnt') then
+			os.execute('sudo chmod 777 ' .. opt.path)
+		end
+		torch.save(opt.path .. '/compressed_provider.t7', provider)
+	end
 end

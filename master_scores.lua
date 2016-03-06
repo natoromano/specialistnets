@@ -4,6 +4,7 @@
 require 'xlua'
 require 'nn'
 dofile 'provider.lua'
+dofile 'unsupervised_provider.lua'
 local c = require 'trepl.colorize'
 
 -- Parameters
@@ -14,6 +15,7 @@ cmd:text('Options')
 cmd:option('-path', 'master/master_scores.t7', 'Path to save the scores')
 cmd:option('-model', 'master/model.net', 'Path to the master model')
 cmd:option('-data', '/mnt', 'Path to master provider')
+cmd:option('-unsupervised', false, 'Training method')
 cmd:option('-backend', 'cudnn')
 cmd:text()
 
@@ -56,14 +58,19 @@ end
 model = torch.load(opt.model)
 -- load data
 os.execute('sudo chmod 777 ' .. opt.data)
-m_provider = torch.load(opt.data .. '/master_provider.t7')
--- Compute scores
-scores = {}
-print(c.blue '==>'.." computing training scores...")
-scores.train = compute_scores(model, m_provider.trainData, 100)
-print(c.blue '==>'.." computing validation scores...")
-scores.val = compute_scores(model, m_provider.valData, 100)
-print(c.blue '==>'.." computing test scores...")
-scores.test = compute_scores(model, m_provider.testData, 100)
+if opt.unsupervised == false then
+	m_provider = torch.load(opt.data .. '/master_provider.t7')
+	-- Compute scores
+	scores = {}
+	print(c.blue '==>'.." computing training scores...")
+	scores.train = compute_scores(model, m_provider.trainData, 100)
+	print(c.blue '==>'.." computing validation scores...")
+	scores.val = compute_scores(model, m_provider.valData, 100)
+	print(c.blue '==>'.." computing test scores...")
+	scores.test = compute_scores(model, m_provider.testData, 100)
+else
+	print(c.blue '==>'.." computing training scores...")
+	m_provider = torch.load(opt.data .. '/unsupervised_provider.t7')
+	scores = compute_scores(model, m_provider.trainData, 100)
 -- Save scores
 torch.save(opt.path, scores)
