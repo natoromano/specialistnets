@@ -19,14 +19,14 @@ end
 local MaxPooling = nn.SpatialMaxPooling
 
 -- VGG Architecture
-ConvBNReLU(3,32):add(nn.Dropout(0.3))
+ConvBNReLU(3,32)
 ConvBNReLU(32,32)
 spec:add(MaxPooling(2,2,2,2):ceil())
-ConvBNReLU(32,64):add(nn.Dropout(0.4))
+ConvBNReLU(32,64)
 ConvBNReLU(64,64)
 spec:add(MaxPooling(2,2,2,2):ceil())
-ConvBNReLU(64,128):add(nn.Dropout(0.4))
-ConvBNReLU(128,128):add(nn.Dropout(0.4))
+ConvBNReLU(64,128)
+ConvBNReLU(128,128)
 ConvBNReLU(128,128)
 spec:add(MaxPooling(2,2,2,2):ceil())
 spec:add(nn.View(128*4*4))
