@@ -90,12 +90,12 @@ function create_prob_distribution(inputs, domains)
       local dim = #domain + 1
       probs = sm:forward(inputs[{{j},{id+1, id+dim}}])
       min_dustbin_prob = 1.1
-      if (probs[#probs] < min_dustbin_prob) then
-        min_dustbin_prob = probs[#probs]
+      if (probs[{1,probs:size(2)}] < min_dustbin_prob) then
+        min_dustbin_prob = probs[{1,probs:size(2)}]
         outputs[{{j},{}}]:zero()
-	for k, class in pairs(domain) do
-	  outputs[{j,class}] = probs[{1,k}]
-	end
+        for k, class in pairs(domain) do
+          outputs[{j,class}] = probs[{1,k}]
+        end
       end
       id = id + dim
     end
