@@ -1,6 +1,5 @@
---[[ Code to concatenate the outputs of all specialists using the max of all non
-dustbin scores. Need to run specialist_scores_no_dust before this.
-This code is inspired by Sergey Zagoruyko, cf 
+--[[ To predict:
+choose the specialist which has the lowest dustbin probability
 https://github.com/szagoruyko/cifar.torch ]]--
 
 -- Imports
@@ -27,14 +26,17 @@ cmd:text()
 -- Parse input params
 local opt = cmd:parse(arg)
 
--- Import cunn if GPU
-if opt.gpu == 'true' then
-  require 'cunn'
+-- Import necessary modules
+if opt.backend == 'cudnn' then
+	require 'cunn'
+	require 'cudnn'
+	require 'cutorch'
+	cudnn.fastest, cudnn.benchmark = true, true
 end
 
-if opt.backend == 'cudnn' then
-   require 'cudnn'
-   cudnn.fastest, cudnn.benchmark = true, true
+if opt.backpend == 'cunn' then
+	require 'cunn'
+	require 'cutorch'
 end
 
 -- Data loading
@@ -43,6 +45,7 @@ if string.find(opt.data, 'mnt') then
     os.execute('sudo chmod 777 ' .. opt.data)
 end
 
+domains = torch.load(opt.domains)
 
 provider = torch.load(opt.data .. '/specialist_scores_no_dust.t7')
 provider.trainData.data = provider.trainData.data:float()
@@ -58,6 +61,13 @@ testLogger:setNames{'% mean class accuracy (train set)',
 testLogger.showPlot = false
 
 
+print(c.blue'==>' ..' setting criterion')
+if opt.gpu == 'true' then
+  sm = nn.SoftMax():cuda()
+else
+  sm = nn.SoftMax()
+end
+
 if opt.gpu == 'true' then
   targets = torch.CudaTensor(opt.batchSize)
 else
@@ -69,17 +79,45 @@ indices = indices:long():split(opt.batchSize)
 --indices[#indices] = nil
 -- /!\ ALWAYS HAVE A BATCHSIZE SUCH THAT BS | 40000
 
+function create_prob_distribution(inputs, domains)
+  -- initialize outputs
+  local bs = input:size(1)
+
+  local outputs = torch.FloatTensor(bs,100)
+  local id = 0
+  local min_dustbin_prob = 1.1
+  --[[ for every specialist check who has the smallest dustbin prob and copy its
+  probability distribution ]]--
+  for i, domain in pairs(domains) do
+    local dim = #domain + 1
+    for j = 1, bs do
+      probs = sm:forward(inputs[{{j},{id+1, id+dim}}])
+    
+      if (probs[#probs] < min_dustbin_prob) then
+        min_dustbin_prob = probs[#probs]
+        outputs[{{j},{}}]:zero()
+        outputs[{{j},{id+1, id+dim-1}}] = probs[{{1,dim-1}}]
+      end
+    end
+    id = id + dim
+  end
+  return outputs
+end 
+  
+
 local tic = torch.tic()
 -- Iterate over batches
 for t,v in ipairs(indices) do
   xlua.progress(t, #indices)
 
-  local outputs = provider.trainData.data:index(1,v)
+  local inputs = provider.trainData.data:index(1,v)
+  local outputs = create_prob_distribution(inputs, domains)
   targets:copy(provider.trainData.label:index(1,v))
 
   confusion:batchAdd(outputs, targets)
 
 end
+
 
 confusion:updateValids()
 print(('Train accuracy: '..c.cyan'%.2f'..' %%\t time: %.2f s'):format(
@@ -92,7 +130,8 @@ confusion:zero()
 print(c.blue '==>'.." testing")
 local bs = opt.batchSize
 for i=1,provider.valData.data:size(1),bs do
-  local outputs = provider.valData.data:narrow(1,i,bs)
+  local inputs = provider.valData.data:narrow(1,i,bs)
+  local outputs = create_prob_distribution(inputs, domains)
   confusion:batchAdd(outputs, provider.valData.label:narrow(1,i,bs))
 end
 

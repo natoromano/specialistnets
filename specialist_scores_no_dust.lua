@@ -1,4 +1,6 @@
---[[ Given specialist networks, compute the raw scores on CIFAR-100. ]]--
+--[[ Given specialist networks, compute the raw scores on CIFAR-100
+Simply discards the dust bin scores and puts the output classes at their correct
+index ]]--
 
 -- Imports
 require 'xlua'
