@@ -63,11 +63,7 @@ testLogger.showPlot = false
 
 
 print(c.blue'==>' ..' setting criterion')
-if opt.gpu == 'true' then
-  sm = nn.SoftMax():cuda()
-else
-  sm = nn.SoftMax()
-end
+sm = nn.SoftMax()
 
 if opt.gpu == 'true' then
   targets = torch.CudaTensor(opt.batchSize)
@@ -82,25 +78,27 @@ indices = indices:long():split(opt.batchSize)
 
 function create_prob_distribution(inputs, domains)
   -- initialize outputs
-  local bs = input:size(1)
-
+  local bs = inputs:size(1)
   local outputs = torch.FloatTensor(bs,100)
   local id = 0
   local min_dustbin_prob = 1.1
   --[[ for every specialist check who has the smallest dustbin prob and copy its
   probability distribution ]]--
-  for i, domain in pairs(domains) do
-    local dim = #domain + 1
-    for j = 1, bs do
+  for j = 1, bs do
+    id = 0
+    for i, domain in pairs(domains) do
+      local dim = #domain + 1
       probs = sm:forward(inputs[{{j},{id+1, id+dim}}])
-    
+      min_dustbin_prob = 1.1
       if (probs[#probs] < min_dustbin_prob) then
         min_dustbin_prob = probs[#probs]
         outputs[{{j},{}}]:zero()
-        outputs[{{j},{id+1, id+dim-1}}] = probs[{{1,dim-1}}]
+	for k, class in pairs(domain) do
+	  outputs[{j,class}] = probs[{1,k}]
+	end
       end
+      id = id + dim
     end
-    id = id + dim
   end
   return outputs
 end 
