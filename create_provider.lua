@@ -84,15 +84,16 @@ else
 	normalization.std_u = norm_provider.trainData.std_u
 	normalization.mean_v = norm_provider.trainData.mean_v
 	normalization.std_v = norm_provider.trainData.std_v
+
 	-- Master provider creation
 	if opt.target == 'master' then
-		provider = UProvider(opt.size, opt.normalization)
+		provider = UProvider(opt.size, normalization)
 		provider:normalize()
 		-- Change permissions on temp mnt/ directory on AWS
 		if string.find(opt.path, 'mnt') then
 			os.execute('sudo chmod 777 ' .. opt.path)
 		end
-		torch.save(opt.path .. '/master_provider.t7', provider)
+		torch.save(opt.path .. '/master_uprovider.t7', provider)
 	end
 
 	-- Specialist provider creation (same but with scores)
@@ -105,20 +106,20 @@ else
 			os.execute('sudo chmod 777 ' .. opt.path)
 		end
 		for i, domain in ipairs(domains) do
-		  provider = Provider(opt.size, opt.normalization, scores, domain)
+		  provider = UProvider(opt.size, normalization, scores, domain)
 		  provider:normalize()
-	    torch.save(opt.path .. '/specialist' .. i .. '_provider.t7', provider)
+	      torch.save(opt.path .. '/specialist' ..i.. '_uprovider.t7', provider)
 	  end
 	end	
 
 	if opt.target == 'compressed' then
-	  	scores = torch.load(opt.scores)
-		provider = Provider(scores)
+	  	scores = torch.load(opt.scores, normalization)
+		provider = UProvider(scores)
 		provider:normalize()
 		-- Change permissions on temp mnt/ directory on AWS
 		if string.find(opt.path, 'mnt') then
 			os.execute('sudo chmod 777 ' .. opt.path)
 		end
-		torch.save(opt.path .. '/compressed_provider.t7', provider)
+		torch.save(opt.path .. '/compressed_uprovider.t7', provider)
 	end
 end

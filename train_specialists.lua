@@ -296,7 +296,7 @@ function train_unsupervised()
     xlua.progress(t, #indices)
 
     local inputs = provider.trainData.data:index(1,v)
-    targets.labels:fill(-1)
+    targets.labels = provider.trainData.label
     targets.scores:copy(provider.trainData.scores:index(1,v))
     
     local feval = function(x)
