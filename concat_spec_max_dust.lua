@@ -1,5 +1,6 @@
 --[[ To predict:
 choose the specialist which has the lowest dustbin probability
+run specialist_scores.lua before this
 https://github.com/szagoruyko/cifar.torch ]]--
 
 -- Imports
@@ -47,7 +48,7 @@ end
 
 domains = torch.load(opt.domains)
 
-provider = torch.load(opt.data .. '/specialist_scores_no_dust.t7')
+provider = torch.load(opt.data .. '/specialist_scores.t7')
 provider.trainData.data = provider.trainData.data:float()
 provider.valData.data = provider.valData.data:float()
 
