@@ -44,6 +44,18 @@ if opt.target == 'master' then
 	torch.save(opt.path .. '/master_provider.t7', provider)
 end
 
+-- Compressed model provider creation
+if opt.target == 'compressed' then
+  scores = torch.load(opt.scores)
+	provider = Provider(scores)
+	provider:normalize()
+	-- Change permissions on temp mnt/ directory on AWS
+	if string.find(opt.path, 'mnt') then
+		os.execute('sudo chmod 777 ' .. opt.path)
+	end
+	torch.save(opt.path .. '/compressed_provider.t7', provider)
+end
+
 -- Specialist provider creation (same but with scores)
 if opt.target == 'specialists' then
   domains = torch.load(opt.domains)
