@@ -325,6 +325,11 @@ function train_unsupervised()
 end
 
 if opt.unsupervised == true then
+  -- Data loading
+  print(c.blue '==>' ..' loading unsupervised data')
+  provider = torch.load(opt.data)
+  provider.trainData.data = provider.trainData.data:float()
+
   print(c.blue'==>' ..' setting unsupervised criterion')
   if opt.gpu == 'true' then
     criterion = DarkKnowledgeCriterion(1.0, opt.T):cuda()

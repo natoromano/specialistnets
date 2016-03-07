@@ -26,7 +26,8 @@ function UProvider:__init(size, normalization, scores, domain)
     
   else
     self.trainData = torch.load('./data/unsupervised.t7')
-    self.trainData.data = self.testData.data[{ {1, size} }]
+    print(self.trainData.data:size())
+    self.trainData.data = self.trainData.data[{ {1, size} }]
     self.trainData.data = self.trainData.data:type('torch.FloatTensor')
     self.trainData.scores = populate_scores(scores, domain)
     self.trainData.size = function() return self.trainData.data:size(1) end
