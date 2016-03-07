@@ -33,12 +33,14 @@ cmd:option('-alpha', 0.9, 'High temperature coefficient for knowledge transfer')
 cmd:option('-T', 50, 'Temperature for knowledge transfer')
 cmd:option('-unsupervised', false, 'Enable unsupervised learning')
 cmd:option('-unsup_epochs', 50, 'Number of unsupervised learning epochs')
+cmd:option('-unsup_data', 'default')
 cmd:text()
 
 -- Parse input params
 local opt = cmd:parse(arg)
 if opt.data == 'default' then
   opt.data = '/mnt/specialist' .. opt.index .. '_provider.t7'
+  opt.unsup_data = '/mnt/specialist' .. opt.index .. '_uprovider.t7'
 end
 
 -- Import cunn if GPU
@@ -285,7 +287,7 @@ function train_unsupervised()
     targets.labels = torch.FloatTensor(opt.batchSize)
     targets.scores = torch.FloatTensor(opt.batchSize, num_class_specialist)
   end
-  local indices = torch.randperm(provider.trainData.data:size(1))
+  local indices = torch.randperm(uprovider.trainData.data:size(1))
   indices = indices:long():split(opt.batchSize)
   -- Remove last element so that all the batches have equal size
   indices[#indices] = nil
@@ -295,9 +297,9 @@ function train_unsupervised()
   for t,v in ipairs(indices) do
     xlua.progress(t, #indices)
 
-    local inputs = provider.trainData.data:index(1,v)
-    targets.labels = provider.trainData.label
-    targets.scores:copy(provider.trainData.scores:index(1,v))
+    local inputs = uprovider.trainData.data:index(1,v)
+    targets.labels = uprovider.trainData.label
+    targets.scores:copy(uprovider.trainData.scores:index(1,v))
     
     local feval = function(x)
       if x ~= parameters then parameters:copy(x) end
@@ -327,8 +329,8 @@ end
 if opt.unsupervised == true then
   -- Data loading
   print(c.blue '==>' ..' loading unsupervised data')
-  provider = torch.load(opt.data)
-  provider.trainData.data = provider.trainData.data:float()
+  uprovider = torch.load(opt.unsup_data)
+  uprovider.trainData.data = uprovider.trainData.data:float()
 
   print(c.blue'==>' ..' setting unsupervised criterion')
   if opt.gpu == 'true' then

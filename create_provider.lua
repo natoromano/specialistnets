@@ -113,8 +113,8 @@ else
 	end	
 
 	if opt.target == 'compressed' then
-	  	scores = torch.load(opt.scores, normalization)
-		provider = UProvider(scores)
+	  	scores = torch.load(opt.scores)
+		provider = UProvider(scores, normalization)
 		provider:normalize()
 		-- Change permissions on temp mnt/ directory on AWS
 		if string.find(opt.path, 'mnt') then

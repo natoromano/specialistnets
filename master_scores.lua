@@ -41,16 +41,15 @@ function compute_scores(model, inputData, dim_output)
 	scores on the data
 	inputData must have a field .data, and a :size() method. ]]--
 	local scores = torch.FloatTensor(inputData:size(), dim_output):zero()
-	local bs = 10  -- batch size for forward pass
+	local bs = 125  -- batch size for forward pass
 	for i = 1, inputData.data:size(1), bs do
 		if opt.backend == 'cudnn' or opt.backend == 'cunn' then
 			data = inputData.data:narrow(1, i, bs):cuda()
-			print(data:size())
 		else
 			data = inputData.data:narrow(1, i, bs)
 		end
 		local outputs = model:forward(data):float()
-		scores[{{i, i+10}}] = outputs
+		scores[{{i, i+124}}] = outputs
 	end
 	return scores
 end

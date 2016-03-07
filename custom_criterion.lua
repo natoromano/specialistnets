@@ -51,5 +51,6 @@ function DarkKnowledgeCriterion:updateGradInput(input, target)
         grad_kl = self.lsm:backward(input:div(self.temp),grad_kl):mul(self.temp)
         -- grad_kl is multiplied by T^2 as recommended by Hinton et al. 
         self.gradInput = grad_kl        
+    end
     return self.gradInput
 end
