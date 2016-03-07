@@ -26,8 +26,11 @@ function DarkKnowledgeCriterion:updateOutput(input, target)
     local log_probs = self.lsm:forward(input:div(self.temp))
     if self.supervised then
         self.output = self.ce_crit:forward(input, target.labels)*(1-self.alpha)
+        -- local str = string.format('CE/KL loss: %1.0e/%1.0e', self.output,
+        --                   self.kl_crit:forward(log_probs, soft_target) * self.alpha) 
         self.output = self.output +
             self.kl_crit:forward(log_probs, soft_target) * self.alpha
+        -- print(str)
     else
         self.output = self.kl_crit:forward(log_probs, soft_target)
     end
@@ -46,6 +49,8 @@ function DarkKnowledgeCriterion:updateGradInput(input, target)
         grad_kl = self.lsm:backward(input:div(self.temp),grad_kl):mul(self.temp)
         -- grad_kl is multiplied by T^2 as recommended by Hinton et al. 
         self.gradInput = grad_ce + grad_kl
+        --local str = string.format('CE/KL grad:     %1.0e/%1.0e', grad_ce:norm(), grad_kl:norm())
+        --print(str)
     else
         local grad_kl = self.kl_crit:backward(log_probs, soft_target)
         grad_kl = self.lsm:backward(input:div(self.temp),grad_kl):mul(self.temp)

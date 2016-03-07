@@ -13,21 +13,22 @@ cmd = torch.CmdLine()
 cmd:text('Train spcialist networks')
 cmd:text()
 cmd:text('Options')
-cmd:option('-model', 'vgg_compressed')
+cmd:option('-model', 'small_compressed')
 cmd:option('-save', 'compressed_logs')
 cmd:option('-data', '/mnt/compressed_provider.t7')
 cmd:option('-batchSize', 128)
 cmd:option('-learningRate', 1)
 cmd:option('-learningRateDecay', 1e-7)
-cmd:option('-weightDecay', 0.0005)
+cmd:option('-weightDecay', 0.000)
 cmd:option('-momentum', 0.9)
-cmd:option('-epoch_step', 25)
-cmd:option('-max_epoch', 150)
+cmd:option('-epoch_step', 20)
+cmd:option('-max_epoch', 130)
 cmd:option('-backend', 'cudnn')
 cmd:option('-gpu', 'true')
-cmd:option('-checkpoint', 25)
+cmd:option('-checkpoint', 150)
 cmd:option('-alpha', 0.9, 'High temperature coefficient for knowledge transfer')
-cmd:option('-T', 100, 'Temperature for knowledge transfer')
+cmd:option('-T', 30, 'Temperature for knowledge transfer')
+cmd:option('-index', 1, 'Index for saving report.html file ')
 cmd:text()
 
 -- Parse input params
@@ -207,7 +208,7 @@ function test()
 
     -- Create HTML report
     -- Thanks to Sergey Zagoruyko, cf https://github.com/szagoruyko/cifar.torch
-    local file = io.open(opt.save..'/report.html','w')
+    local file = io.open(opt.save..'/report' .. opt.index .. '.html','w')
     file:write(([[
     <!DOCTYPE html>
     <html>
@@ -222,6 +223,9 @@ function test()
         file:write('<tr><td>'..k..'</td><td>'..v..'</td></tr>\n')
       end
     end
+    file:write('<tr><td>Temp</td><td>'.. opt.T ..'</td></tr>\n')
+    file:write('<tr><td>alpha</td><td>'.. opt.alpha ..'</td></tr>\n')
+    file:write('<tr><td>initial LR</td><td>'.. opt.learningRate ..'</td></tr>\n')
     file:write'</table><pre>\n'
     file:write(tostring(confusion)..'\n')
     file:write(tostring(model)..'\n')
