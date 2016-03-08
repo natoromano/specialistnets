@@ -62,14 +62,14 @@ if opt.unsupervised == false then
 	m_provider = torch.load(opt.data .. '/master_provider.t7')
 	-- Compute scores
 	scores = {}
-	print(c.blue '==>'.." computing training scores...")
+	print(c.blue '==>'.." Computing training scores...")
 	scores.train = compute_scores(model, m_provider.trainData, 100)
-	print(c.blue '==>'.." computing validation scores...")
+	print(c.blue '==>'.." Computing validation scores...")
 	scores.val = compute_scores(model, m_provider.valData, 100)
-	print(c.blue '==>'.." computing test scores...")
+	print(c.blue '==>'.." Computing test scores...")
 	scores.test = compute_scores(model, m_provider.testData, 100)
 else
-	print(c.blue '==>'.." computing training scores...")
+	print(c.blue '==>'.." Computing training scores...")
 	m_provider = torch.load(opt.data .. '/master_uprovider.t7')
 	scores = compute_scores(model, m_provider.trainData, 100)
 end

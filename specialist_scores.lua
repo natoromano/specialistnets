@@ -73,7 +73,7 @@ provider = torch.load(opt.data .. '/master_provider.t7')
 -- compute scores
 local id = 0
 for i, domain in pairs(domains) do
-	print(c.blue '==>'.." computing scores for specialist" .. i .. "...")
+	print(c.blue '==>'.." Computing scores for specialist" .. i .. "...")
 	-- load model
 	model = torch.load(opt.models .. '/sp' .. i .. 'ep' .. opt.epochs .. '.net')
 	-- Compute scores

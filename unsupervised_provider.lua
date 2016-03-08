@@ -26,7 +26,6 @@ function UProvider:__init(size, normalization, scores, domain)
     
   else
     self.trainData = torch.load('./data/unsupervised.t7')
-    print(self.trainData.data:size())
     self.trainData.data = self.trainData.data[{ {1, size} }]
     self.trainData.data = self.trainData.data:type('torch.FloatTensor')
     self.trainData.scores = populate_scores(scores, domain)
@@ -37,6 +36,7 @@ end
 
 function populate_scores(input_scores, curr_domain, method)
   -- Creates special scores for specialists
+  method = method or 'max'
   local raw_scores = input_scores:clone()
   output_scores = raw_scores:clone()
   output_scores:resize(raw_scores:size(1), #curr_domain + 1)

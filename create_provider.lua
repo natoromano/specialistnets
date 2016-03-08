@@ -11,7 +11,7 @@ cmd = torch.CmdLine()
 cmd:text('Create provider')
 cmd:text()
 cmd:text('Options')
-cmd:option('-target', 'specialists', 'Target should be specialists, compressed  or master')
+cmd:option('-target', 'specialists', 'Target should be specialists, compressed or master')
 cmd:option('-method', 'supervised', 'Should be supervised or unsupervised')
 cmd:option('-provider', 'master/master_provider.t7', 
 	'Path to master (or specialist) provider for normalization constants')
@@ -108,7 +108,7 @@ else
 		for i, domain in ipairs(domains) do
 		  provider = UProvider(opt.size, normalization, scores, domain)
 		  provider:normalize()
-	      torch.save(opt.path .. '/specialist' ..i.. '_uprovider.t7', provider)
+	      torch.save(opt.path .. '/specialist' .. i .. '_uprovider.t7', provider)
 	  end
 	end	
 

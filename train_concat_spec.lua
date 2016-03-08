@@ -37,7 +37,7 @@ if opt.gpu == 'true' then
   require 'cunn'
 end
 -- Model configuration
-print(c.blue '==>' ..' configuring model')
+print(c.blue '==>' ..' Configuring model')
 local model = nn.Sequential()
 if opt.gpu == 'true' then
   model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor'):cuda())
@@ -55,7 +55,7 @@ if opt.backend == 'cudnn' then
 end
 
 -- Data loading
-print(c.blue '==>' ..' loading data')
+print(c.blue '==>' ..' Loading data')
 if string.find(opt.data, 'mnt') then
     os.execute('sudo chmod 777 ' .. opt.data)
 end
@@ -76,14 +76,14 @@ testLogger.showPlot = false
 
 parameters, gradParameters = model:getParameters()
 
-print(c.blue'==>' ..' setting criterion')
+print(c.blue'==>' ..' Setting criterion')
 if opt.gpu == 'true' then
   criterion = nn.CrossEntropyCriterion():cuda()
 else
   criterion = nn.CrossEntropyCriterion()
 end
 
-print(c.blue'==>' ..' configuring optimizer')
+print(c.blue'==>' ..' Configuring optimizer')
 optimState = {
   learningRate = opt.learningRate,
   weightDecay = opt.weightDecay,
@@ -101,7 +101,7 @@ function train()
     optimState.learningRate = optimState.learningRate / 2 
   end
   
-  print(c.blue '==>'.." online epoch # " .. 
+  print(c.blue '==>'.." Epoch # " .. 
     epoch .. ' [batchSize = ' .. opt.batchSize .. ']')
 
   if opt.gpu == 'true' then
@@ -152,7 +152,7 @@ end
 function test()
   -- Switch to test mode
   model:evaluate()
-  print(c.blue '==>'.." testing")
+  print(c.blue '==>'.." Testing")
   local bs = 125
   for i=1,provider.valData.data:size(1),bs do
     local outputs = model:forward(provider.valData.data:narrow(1,i,bs))
@@ -205,7 +205,7 @@ function test()
   -- Save model every 'checkpoint' epochs
   if epoch % opt.checkpoint == 0 then
     local filename = paths.concat(opt.save, 'model' .. epoch .. '.net')
-    print(c.blue '==>' .. 'saving model to '.. filename)
+    print(c.blue '==>' .. 'Saving model to '.. filename)
     torch.save(filename, model:get(2):clearState())
   end
 

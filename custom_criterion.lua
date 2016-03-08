@@ -25,7 +25,7 @@ function DarkKnowledgeCriterion:updateOutput(input, target)
     local soft_target = self.sm:forward(target.scores:div(self.temp))
     local log_probs = self.lsm:forward(input:div(self.temp))
     if self.supervised then
-        self.output = self.ce_crit:forward(input, target.labels)*(1-self.alpha)
+        self.output = self.ce_crit:forward(input, target.labels) * (1-self.alpha)
         -- local str = string.format('CE/KL loss: %1.0e/%1.0e', self.output,
         --                   self.kl_crit:forward(log_probs, soft_target) * self.alpha) 
         self.output = self.output +

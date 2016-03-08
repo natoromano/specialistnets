@@ -17,11 +17,11 @@ cmd:text('Options')
 cmd:option('-model', 'vgg_specialists')
 cmd:option('-save', 'specialist_logs')
 cmd:option('-domains', 'specialists/new.t7')
-cmd:option('-index', 2)
+cmd:option('-index', 1)
 cmd:option('-data', 'default')
 cmd:option('-batchSize', 128)
-cmd:option('-learningRate', 200)
-cmd:option('-learningRateDecay', 1e-7)
+cmd:option('-learningRate', 75)
+cmd:option('-learningRateDecay', 1e-6)
 cmd:option('-weightDecay', 0.0000)
 cmd:option('-momentum', 0.9)
 cmd:option('-epoch_step', 20)
@@ -77,7 +77,7 @@ do
 end
 
 -- Specialist creation
-print(c.blue '==>' ..' creating specialist ' .. opt.index)
+print(c.blue '==>' ..' Creating specialist ' .. opt.index)
 domains = torch.load(opt.domains)
 domain = domains[opt.index]
 num_class_specialist = #domain + 1
@@ -97,7 +97,7 @@ if opt.backend == 'cudnn' then
 end
 
 -- Data loading
-print(c.blue '==>' ..' loading data')
+print(c.blue '==>' ..' Loading data')
 provider = torch.load(opt.data)
 provider.trainData.data = provider.trainData.data:float()
 provider.valData.data = provider.valData.data:float()
@@ -114,14 +114,14 @@ testLogger.showPlot = false
 --[[ TODO !!!!!! ]]
 parameters, gradParameters = model:getParameters()
 
-print(c.blue'==>' ..' setting criterion')
+print(c.blue'==>' ..' Setting criterion')
 if opt.gpu == 'true' then
   criterion = DarkKnowledgeCriterion(opt.alpha, opt.T):cuda()
 else
   criterion = DarkKnowledgeCriterion(opt.alpha, opt.T)
 end
 
-print(c.blue'==>' ..' configuring optimizer')
+print(c.blue'==>' ..' Configuring optimizer')
 optimState = {
   learningRate = opt.learningRate,
   weightDecay = opt.weightDecay,
@@ -140,7 +140,7 @@ function train()
     optimState.learningRate = optimState.learningRate / 2 
   end
   
-  print(c.blue '==>'.." online epoch # " .. 
+  print(c.blue '==>'.." Epoch # " .. 
     epoch .. ' [batchSize = ' .. opt.batchSize .. '] specialist ' .. opt.index)
 
   targets = {}
@@ -194,7 +194,7 @@ end
 function test()
   -- Switch to test mode
   model:evaluate()
-  print(c.blue '==>'.." testing")
+  print(c.blue '==>'.." Testing")
   local bs = 125
   for i=1,provider.valData.data:size(1),bs do
     if i> provider.valData.data:size(1)-bs then
@@ -252,7 +252,7 @@ function test()
   if epoch % opt.checkpoint == 0 then
     local model_name = 'sp' .. opt.index .. 'ep' .. epoch .. '.net'
     local filename = paths.concat(opt.save, model_name)
-    print(c.blue '==>' .. 'saving model to '.. filename)
+    print(c.blue '==>' .. 'Saving model to '.. filename)
     torch.save(filename, model:get(3):clearState())
   end
 
@@ -276,7 +276,7 @@ function train_unsupervised()
     optimState.learningRate = optimState.learningRate / 2 
   end
   
-  print(c.blue '==>'.." online unsupervised epoch # " .. 
+  print(c.blue '==>'.." Unsupervised epoch # " .. 
     epoch .. ' [batchSize = ' .. opt.batchSize .. '] specialist ' .. opt.index)
 
   targets = {}
@@ -328,11 +328,11 @@ end
 
 if opt.unsupervised == true then
   -- Data loading
-  print(c.blue '==>' ..' loading unsupervised data')
+  print(c.blue '==>' ..' Loading unsupervised data')
   uprovider = torch.load(opt.unsup_data)
   uprovider.trainData.data = uprovider.trainData.data:float()
 
-  print(c.blue'==>' ..' setting unsupervised criterion')
+  print(c.blue'==>' ..' Setting unsupervised criterion')
   if opt.gpu == 'true' then
     criterion = DarkKnowledgeCriterion(1.0, opt.T):cuda()
   else

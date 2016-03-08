@@ -137,6 +137,7 @@ end
 
 function populate_scores(input_scores, curr_domain, method)
   -- Creates special scores for specialists
+  method = method or 'max'
   local raw_scores = input_scores:clone()
   output_scores = raw_scores:clone()
   output_scores:resize(raw_scores:size(1), #curr_domain + 1)
@@ -160,7 +161,7 @@ function Provider:normalize()
   local valData = self.valData
   local testData = self.testData
 
-  print '<trainer> preprocessing data (color space + normalization)'
+  print 'Preprocessing data (color space + normalization)'
   collectgarbage()
 
   -- Preprocess trainSet
