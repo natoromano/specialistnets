@@ -34,6 +34,7 @@ cmd:option('-T', 20, 'Temperature for knowledge transfer')
 cmd:option('-unsupervised', false, 'Enable unsupervised learning')
 cmd:option('-unsup_epochs', 50, 'Number of unsupervised learning epochs')
 cmd:option('-unsup_data', 'default')
+cmd:option('-m','none', 'Add info to be included in the report.html')
 cmd:text()
 
 -- Parse input params
@@ -241,6 +242,10 @@ function test()
         file:write('<tr><td>'..k..'</td><td>'..v..'</td></tr>\n')
       end
     end
+    file:write('<tr><td>Temp</td><td>'.. opt.T ..'</td></tr>\n')
+    file:write('<tr><td>alpha</td><td>'.. opt.alpha ..'</td></tr>\n')
+    file:write('<tr><td>initial LR</td><td>'.. opt.learningRate ..'</td></tr>\n')
+    file:write('<tr><td>Comments</td><td>'.. opt.m ..'</td></tr>\n')
     file:write'</table><pre>\n'
     file:write(tostring(confusion)..'\n')
     file:write(tostring(model)..'\n')

@@ -30,6 +30,7 @@ cmd:option('-alpha', 0.9, 'High temperature coefficient for knowledge transfer')
 cmd:option('-T', 10, 'Temperature for knowledge transfer')
 cmd:option('-index', 1, 'Index for saving report.html file ')
 cmd:option('-soft_loss','KL', 'Method for comparing the soft targest in the criterion (KL or L2)')
+cmd:option('-m','none', 'Add info to be included in the report.html')
 cmd:text()
 
 -- Parse input params
@@ -227,6 +228,7 @@ function test()
     file:write('<tr><td>Temp</td><td>'.. opt.T ..'</td></tr>\n')
     file:write('<tr><td>alpha</td><td>'.. opt.alpha ..'</td></tr>\n')
     file:write('<tr><td>initial LR</td><td>'.. opt.learningRate ..'</td></tr>\n')
+    file:write('<tr><td>Comments</td><td>'.. opt.m ..'</td></tr>\n')
     file:write'</table><pre>\n'
     file:write(tostring(confusion)..'\n')
     file:write(tostring(model)..'\n')
