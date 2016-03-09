@@ -13,7 +13,7 @@ cmd = torch.CmdLine()
 cmd:text('Train spcialist networks')
 cmd:text()
 cmd:text('Options')
-cmd:option('-model', 'small_compressed')
+cmd:option('-model', 'vgg_compressed')
 cmd:option('-save', 'compressed_logs')
 cmd:option('-data', '/mnt/compressed_provider.t7')
 cmd:option('-batchSize', 128)
@@ -27,8 +27,9 @@ cmd:option('-backend', 'cudnn')
 cmd:option('-gpu', 'true')
 cmd:option('-checkpoint', 150)
 cmd:option('-alpha', 0.9, 'High temperature coefficient for knowledge transfer')
-cmd:option('-T', 30, 'Temperature for knowledge transfer')
+cmd:option('-T', 10, 'Temperature for knowledge transfer')
 cmd:option('-index', 1, 'Index for saving report.html file ')
+cmd:options('-soft_loss','KL', 'Method for comparing the soft targest in the criterion (KL or L2)')
 cmd:text()
 
 -- Parse input params
@@ -103,9 +104,9 @@ parameters, gradParameters = model:getParameters()
 
 print(c.blue'==>' ..' setting criterion')
 if opt.gpu == 'true' then
-  criterion = DarkKnowledgeCriterion(opt.alpha, opt.T):cuda()
+  criterion = DarkKnowledgeCriterion(opt.alpha, opt.T, opt.soft_loss):cuda()
 else
-  criterion = DarkKnowledgeCriterion(opt.alpha, opt.T)
+  criterion = DarkKnowledgeCriterion(opt.alpha, opt.T, opt.soft_loss)
 end
 
 print(c.blue'==>' ..' configuring optimizer')
