@@ -16,7 +16,7 @@ cmd = torch.CmdLine()
 cmd:text('Train a master net')
 cmd:text()
 cmd:text('Options')
-cmd:option('-model', 'vgg_cifar100')
+cmd:option('-model', 'master/vgg_cifar100')
 cmd:option('-save', 'logs')
 cmd:option('-batchSize', 128)
 cmd:option('-learningRate', 1)
@@ -68,10 +68,10 @@ local model = nn.Sequential()
 model:add(nn.BatchFlip():float())
 if opt.gpu == 'true' then
   model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor'):cuda())
-  model:add(dofile('master/' .. opt.model .. '.lua'):cuda())
+  model:add(dofile(opt.model .. '.lua'):cuda())
 else
   model:add(nn.Copy('torch.FloatTensor', 'torch.FloatTensor'))
-  model:add(dofile('master/' .. opt.model .. '.lua'))
+  model:add(dofile(opt.model .. '.lua'))
 end
 model:get(2).updateGradInput = function(input) return end
 

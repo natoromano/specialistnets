@@ -19,11 +19,12 @@ function DarkKnowledgeCriterion:__init(alpha, temp, soft_loss)
     self.ce_crit = nn.CrossEntropyCriterion()
     if self.soft_loss == 'KL' then
         self.kl_crit = nn.DistKLDivCriterion()
-    else if self.soft_loss == 'L2' then
+    elseif self.soft_loss == 'L2' then
         self.mse_crit = nn.MSECriterion()
         self.mse_crit.sizeAverage = false
     else
         error('invalid input as soft_loss')
+    end
 end
 
 function DarkKnowledgeCriterion:updateOutput(input, target)
@@ -47,14 +48,15 @@ function DarkKnowledgeCriterion:updateOutput(input, target)
       local probs = self.sm:forward(input:div(self.temp))
       if self.supervised then
           self.output = self.ce_crit:forward(input, target.labels) * (1-self.alpha)
-          -- local str = string.format('CE/MSE loss: %1.0e/%1.0e', self.output,
-          --                   self.kl_mse:forward(probs, soft_target) * self.alpha) 
+          local str = string.format('CE/MSE loss: %1.0e/%1.0e', self.output,
+                             self.mse_crit:forward(probs, soft_target) * self.alpha) 
           self.output = self.output +
               self.mse_crit:forward(probs, soft_target) * self.alpha
-          -- print(str)
+          print(str)
       else
           self.output = self.mse_crit:forward(probs, soft_target)
       end
+    end
     return self.output
 end
 
@@ -89,13 +91,14 @@ function DarkKnowledgeCriterion:updateGradInput(input, target)
           grad_mse = self.sm:backward(input:div(self.temp),grad_mse):mul(self.temp)
           -- grad_kl is multiplied by T^2 as recommended by Hinton et al. 
           self.gradInput = grad_ce + grad_mse
-          --local str = string.format('CE/MSE grad:     %1.0e/%1.0e', grad_ce:norm(), grad_mse:norm())
-          --print(str)
+          local str = string.format('CE/MSE grad:     %1.0e/%1.0e', grad_ce:norm(), grad_mse:norm())
+          print(str)
       else
           local grad_mse = self.mse_crit:backward(probs, soft_target)
-          grad_mse = self.lsm:backward(input:div(self.temp),grad_mse):mul(self.temp)
+          grad_mse = self.sm:backward(input:div(self.temp),grad_mse):mul(self.temp)
           -- grad_kl is multiplied by T^2 as recommended by Hinton et al. 
           self.gradInput = grad_mse        
       end
+    end
     return self.gradInput
 end

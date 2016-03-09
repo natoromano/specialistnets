@@ -29,7 +29,7 @@ cmd:option('-checkpoint', 150)
 cmd:option('-alpha', 0.9, 'High temperature coefficient for knowledge transfer')
 cmd:option('-T', 10, 'Temperature for knowledge transfer')
 cmd:option('-index', 1, 'Index for saving report.html file ')
-cmd:options('-soft_loss','KL', 'Method for comparing the soft targest in the criterion (KL or L2)')
+cmd:option('-soft_loss','KL', 'Method for comparing the soft targest in the criterion (KL or L2)')
 cmd:text()
 
 -- Parse input params
