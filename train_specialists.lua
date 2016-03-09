@@ -34,11 +34,13 @@ cmd:option('-T', 20, 'Temperature for knowledge transfer')
 cmd:option('-unsupervised', false, 'Enable unsupervised learning')
 cmd:option('-unsup_epochs', 50, 'Number of unsupervised learning epochs')
 cmd:option('-unsup_data', 'default')
+cmd:option('-verbose','false', 'print informaiton about the criterion')
 cmd:option('-m','none', 'Add info to be included in the report.html')
 cmd:text()
 
 -- Parse input params
 local opt = cmd:parse(arg)
+opt.verbose = (opt.verbose == 'true')
 if opt.data == 'default' then
   opt.data = '/mnt/specialist' .. opt.index .. '_provider.t7'
   opt.unsup_data = '/mnt/specialist' .. opt.index .. '_uprovider.t7'
@@ -117,9 +119,9 @@ parameters, gradParameters = model:getParameters()
 
 print(c.blue'==>' ..' Setting criterion')
 if opt.gpu == 'true' then
-  criterion = DarkKnowledgeCriterion(opt.alpha, opt.T):cuda()
+  criterion = DarkKnowledgeCriterion(opt.alpha, opt.T, opt.verbose):cuda()
 else
-  criterion = DarkKnowledgeCriterion(opt.alpha, opt.T)
+  criterion = DarkKnowledgeCriterion(opt.alpha, opt.T, opt.verbose)
 end
 
 print(c.blue'==>' ..' Configuring optimizer')

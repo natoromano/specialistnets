@@ -5,7 +5,7 @@ cf Hinton et al. - Distilling the Knowledge in a Neural Network ]]--
 local DarkKnowledgeCriterion, parent = torch.class('DarkKnowledgeCriterion',
                                                    'nn.Criterion')
 
-function DarkKnowledgeCriterion:__init(alpha, temp, soft_loss)
+function DarkKnowledgeCriterion:__init(alpha, temp, soft_loss, verbose)
     -- alpha: soft cross-entropy weight
     -- temp: temperature
     -- soft_loss: 'KL', 'MSE' or 'L1'
@@ -14,6 +14,7 @@ function DarkKnowledgeCriterion:__init(alpha, temp, soft_loss)
     self.alpha = alpha or 0.9
     self.soft_loss = soft_loss or 'KL'
     self.supervised = (self.alpha < 1.0)
+    self.verbose = verbose or false
     self.sm = nn.SoftMax()
     self.lsm = nn.LogSoftMax()
     self.ce_crit = nn.CrossEntropyCriterion()
@@ -36,11 +37,13 @@ function DarkKnowledgeCriterion:updateOutput(input, target)
       local log_probs = self.lsm:forward(input / self.temp)
       if self.supervised then
           self.output = self.ce_crit:forward(input, target.labels) * (1-self.alpha)
-          -- local str = string.format('CE/KL loss: %1.0e/%1.0e', self.output,
-          --                   self.kl_crit:forward(log_probs, soft_target) * self.alpha) 
+          if self.verbose then
+            local str = string.format('CE/KL loss: %1.0e/%1.0e', self.output,
+                           self.kl_crit:forward(log_probs, soft_target) * self.alpha)
+            print(str)
+          end 
           self.output = self.output +
               self.kl_crit:forward(log_probs, soft_target) * self.alpha
-          -- print(str)
       else
           self.output = self.kl_crit:forward(log_probs, soft_target)
       end
@@ -71,10 +74,12 @@ function DarkKnowledgeCriterion:updateGradInput(input, target)
           local grad_kl = self.kl_crit:backward(log_probs, 
                                       soft_target) * (self.alpha)
           grad_kl = self.lsm:backward(input:div(self.temp),grad_kl) * (self.temp)
-          -- grad_kl is multiplied by T^2 as recommended by Hinton et al. 
+          --grad_kl is multiplied by T^2 as recommended by Hinton et al. 
           self.gradInput = grad_ce + grad_kl
-          --local str = string.format('CE/KL grad:     %1.0e/%1.0e', grad_ce:norm(), grad_kl:norm())
-          --print(str)
+          if self.verbose then
+            local str = string.format('CE/KL grad:     %1.0e/%1.0e', grad_ce:norm(), grad_kl:norm())
+            print(str)
+          end
       else
           local grad_kl = self.kl_crit:backward(log_probs, soft_target)
           grad_kl = self.lsm:backward(input:div(self.temp),grad_kl) * (self.temp)
