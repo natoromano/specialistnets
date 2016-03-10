@@ -17,10 +17,13 @@ cmd:option('-domains', 'specialists/new.t7', 'Path to domains')
 cmd:option('-epochs', 150, 'Number of epochs specialists were trained with')
 cmd:option('-data', '/mnt', 'Path to master provider')
 cmd:option('-backend', 'cudnn')
+cmd:option('-pretrained', 'false', 'to add pretrained network to the mix')
+cmd:option('-pretrained_path','specialists/pretrained.net')
 cmd:text()
 
 -- Parse input params
 local opt = cmd:parse(arg)
+opt.pretrained = (opt.pretrained == 'true')
 
 -- Import necessary modules
 if opt.backend == 'cudnn' then
@@ -60,7 +63,12 @@ os.execute('sudo chmod 777 ' .. opt.data)
 
 -- number of output classes
 domains = torch.load(opt.domains)
-local n_classes = 100 + #domains
+local n_classes = 0
+if opt.pretrained then
+  n_classes = 200 + #domains
+else
+  n_classes = 100 + #domains
+end
 
 -- initialize score tensors
 local train = torch.FloatTensor(40000, n_classes)
@@ -82,6 +90,13 @@ for i, domain in pairs(domains) do
 	val[{{},{id+1, id+dim}}] = compute_scores(model, provider.valData, dim)
 	test[{{},{id+1, id+dim}}] = compute_scores(model, provider.testData, dim)
 	id = id + dim
+end
+if opt.pretrained then
+  print(c.blue '==>'.." Computing scores for pretrained compressed net...")
+  model = torch.load(opt.pretrained_path)
+  train[{{},{id+1, id+100}}] = compute_scores(model, provider.trainData, 100)
+  val[{{},{id+1, id+100}}] = compute_scores(model, provider.valData, 100)
+  test[{{},{id+1, id+100}}] = compute_scores(model, provider.testData, 100)
 end
 
 -- Save scores

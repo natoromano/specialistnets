@@ -1,6 +1,6 @@
 local log_file = io.open('search_specialistlog.log','w')
 best_val = torch.FloatTensor(9):fill(0)
-for i=1,10 do
+for i=1,18 do
   for j=1,9 do
     hard_strength = 1*10^(torch.uniform(-4,-1))
     alpha = 1 - hard_strength
