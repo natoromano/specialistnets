@@ -48,6 +48,8 @@ if opt.data == 'default' then
   opt.data = '/mnt/specialist' .. opt.index .. '_provider.t7'
   opt.unsup_data = '/mnt/specialist' .. opt.index .. '_uprovider.t7'
 end
+-- initialize running mean
+val_running_mean = 0
 
 -- Import cunn if GPU
 if opt.gpu == 'true' then

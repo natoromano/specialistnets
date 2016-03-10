@@ -1,17 +1,17 @@
-local log_file = io.open('search_specialist.log','w')
+local log_file = io.open('search_specialistlog.log','w')
 best_val = torch.FloatTensor(9):fill(0)
 for i=1,10 do
   for j=1,9 do
-    hard_strength = 1*10^(torch.uniform(-4,-1)
+    hard_strength = 1*10^(torch.uniform(-4,-1))
     alpha = 1 - hard_strength
-    lr = 1*10^(torch.uniform((0,2) - 3) / hard_strength
+    lr = 1*10^(torch.uniform(0,2) - 3) / hard_strength
     Temp = 1*10^(torch.uniform(0,1.5))
     str = 'th train_specialists.lua -T '.. Temp..' -learningRate '..lr..' -alpha ' .. alpha ..
             ' -max_epoch 130 -epoch_step 30 -checkpoint 130 -pretrained true' ..
             ' -m \' trying massive search\' -index ' .. j
-    dofile(str)
-    val_running_mean
-    if (val_running_mean > best_val[j]) then
+    os.execute(str)
+    val_running_mean = torch.load('specialist_logs/running_val.t7')
+    if val_running_mean > best_val[j] then
       print('found best for spec ' .. j .. ' at val: ' .. val_running_mean)
       best_val[j] = val_running_mean
       log_file:write('best with: ' .. val_running_mean .. ' ' .. str .. '\n')
