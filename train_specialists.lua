@@ -37,7 +37,7 @@ cmd:option('-unsup_data', 'default')
 cmd:option('-verbose','false', 'print informaiton about the criterion')
 cmd:option('-m','none', 'Add info to be included in the report.html')
 cmd:option('-pretrained', 'false', 'to used a pretrained net for init')
-cmd:opiton('-pretrained_path', 'specialists/pretrained.net', 'path to the pretrained net for initialization')
+cmd:option('-pretrained_path', 'specialists/pretrained.net', 'path to the pretrained net for initialization')
 cmd:text()
 
 -- Parse input params
@@ -94,10 +94,10 @@ model:add(nn.BatchFlip():float())
 if opt.pretrained then -- can only be used if last layer is of input 128
     if opt.gpu == 'true' then
       model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor'):cuda())
-      pre_trained_mod = torch.load(opt.pretrained_model)
+      local pre_trained_mod = torch.load(opt.pretrained_path) 
       pre_trained_mod:remove() -- remove last layer
       pre_trained_mod:add(nn.Linear(128, num_class_specialist))
-      model:add(pre_trained_mod):cuda())
+      model:add(pre_trained_mod:cuda())
     else
       model:add(nn.Copy('torch.FloatTensor', 'torch.FloatTensor'))
       pre_trained_mod = torch.load(opt.pretrained_model)
