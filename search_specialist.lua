@@ -10,11 +10,12 @@ for i=1,10 do
             ' -max_epoch 130 -epoch_step 30 -checkpoint 130 -pretrained true' ..
             ' -m \' trying massive search\' -index ' .. j
     dofile(str)
+    val_running_mean
     if (val_running_mean > best_val[j]) then
       print('found best for spec ' .. j .. ' at val: ' .. val_running_mean)
       best_val[j] = val_running_mean
       log_file:write('best with: ' .. val_running_mean .. ' ' .. str .. '\n')
-      os.execute('cp specialist_logs/' ..model_name.. ' specialist_logs/best_spec_' ..j.. '.net')
+      os.execute('cp specialist_logs/sp' ..j.. 'ep130.net specialist_logs/best_spec_' ..j.. '.net')
       os.execute('cp specialist_logs/report' ..j.. '.html specialist_logs/best_report' ..j.. '.html') 
     else
       log_file:write(str .. '\n')

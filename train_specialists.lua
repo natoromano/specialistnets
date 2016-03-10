@@ -234,6 +234,7 @@ function test()
   confusion:updateValids()
   print('Test accuracy:', confusion.totalValid * 100)
   val_running_mean = confusion.totalValid * 100 * 0.2 + 0.8 * val_running_mean
+  torch.save(opt.save .. '/running_val.t7', val_running_mean)
   
   if testLogger then
     paths.mkdir(opt.save)
