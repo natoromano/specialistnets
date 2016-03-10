@@ -14,7 +14,7 @@ cmd = torch.CmdLine()
 cmd:text('Train specialist networks')
 cmd:text()
 cmd:text('Options')
-cmd:option('-model', 'vgg_specialists')
+cmd:option('-model', 'small_specialists')
 cmd:option('-save', 'specialist_logs')
 cmd:option('-domains', 'specialists/new.t7')
 cmd:option('-index', 1)
@@ -36,11 +36,14 @@ cmd:option('-unsup_epochs', 50, 'Number of unsupervised learning epochs')
 cmd:option('-unsup_data', 'default')
 cmd:option('-verbose','false', 'print informaiton about the criterion')
 cmd:option('-m','none', 'Add info to be included in the report.html')
+cmd:option('-pretrained', 'false', 'to used a pretrained net for init')
+cmd:opiton('-pretrained_path', 'specialists/pretrained.net', 'path to the pretrained net for initialization')
 cmd:text()
 
 -- Parse input params
 local opt = cmd:parse(arg)
 opt.verbose = (opt.verbose == 'true')
+opt.pretrained = (opt.pretrained == 'true')
 if opt.data == 'default' then
   opt.data = '/mnt/specialist' .. opt.index .. '_provider.t7'
   opt.unsup_data = '/mnt/specialist' .. opt.index .. '_uprovider.t7'
@@ -86,18 +89,38 @@ domain = domains[opt.index]
 num_class_specialist = #domain + 1
 local model = nn.Sequential()
 model:add(nn.BatchFlip():float())
-if opt.gpu == 'true' then
-  model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor'):cuda())
-  model:add(dofile('specialists/' .. opt.model .. '.lua'):cuda())
+
+-- load pretrained weights to speed up training
+if opt.pretrained then -- can only be used if last layer is of input 128
+    if opt.gpu == 'true' then
+      model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor'):cuda())
+      pre_trained_mod = torch.load(opt.pretrained_model)
+      pre_trained_mod:remove() -- remove last layer
+      pre_trained_mod:add(nn.Linear(128, num_class_specialist))
+      model:add(pre_trained_mod):cuda())
+    else
+      model:add(nn.Copy('torch.FloatTensor', 'torch.FloatTensor'))
+      pre_trained_mod = torch.load(opt.pretrained_model)
+      pre_trained_mod:remove() -- remove last layer
+      pre_trained_mod:add(nn.Linear(128, num_class_specialist))
+      model:add(pre_trained_mod)
+    end
+    model:get(2).updateGradInput = function(input) return end
 else
-  model:add(nn.Copy('torch.FloatTensor', 'torch.FloatTensor'))
-  model:add(dofile('specialists/' .. opt.model .. '.lua'))
+    if opt.gpu == 'true' then
+      model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor'):cuda())
+      model:add(dofile('specialists/' .. opt.model .. '.lua'):cuda())
+    else
+      model:add(nn.Copy('torch.FloatTensor', 'torch.FloatTensor'))
+      model:add(dofile('specialists/' .. opt.model .. '.lua'))
+    end
+    model:get(2).updateGradInput = function(input) return end
 end
-model:get(2).updateGradInput = function(input) return end
 
 if opt.backend == 'cudnn' then
    cudnn.convert(model:get(3), cudnn)
 end
+
 
 -- Data loading
 print(c.blue '==>' ..' Loading data')
