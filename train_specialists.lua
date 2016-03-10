@@ -233,6 +233,7 @@ function test()
 
   confusion:updateValids()
   print('Test accuracy:', confusion.totalValid * 100)
+  val_running_mean = confusion.totalValid * 100 * 0.2 + 0.8 * val_running_mean
   
   if testLogger then
     paths.mkdir(opt.save)
@@ -280,7 +281,7 @@ function test()
 
   -- Save model every 'checkpoint' epochs
   if epoch % opt.checkpoint == 0 then
-    local model_name = 'sp' .. opt.index .. 'ep' .. epoch .. '.net'
+    model_name = 'sp' .. opt.index .. 'ep' .. epoch .. '.net'
     local filename = paths.concat(opt.save, model_name)
     print(c.blue '==>' .. 'Saving model to '.. filename)
     torch.save(filename, model:get(3):clearState())
