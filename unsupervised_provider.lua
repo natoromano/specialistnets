@@ -58,7 +58,7 @@ function UProvider:normalize()
   -- Thanks to Sergey Zagoruyko, cf https://github.com/szagoruyko/cifar.torch
   local trainData = self.trainData
 
-  print '<trainer> preprocessing data (color space + normalization)'
+  print 'Preprocessing data (color space + normalization)'
   collectgarbage()
 
   -- Preprocess trainSet

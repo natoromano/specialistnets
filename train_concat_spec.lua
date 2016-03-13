@@ -11,15 +11,15 @@ local c = require 'trepl.colorize'
 
 -- Parameters
 cmd = torch.CmdLine()
-cmd:text('Train a master net')
+cmd:text('Train the final linear layer on concatenated scores')
 cmd:text()
 cmd:text('Options')
-cmd:option('-input_dim', 120)
+cmd:option('-input_dim', 209)
 cmd:option('-save', 'logs_concat_spec')
-cmd:option('-batchSize', 128)
-cmd:option('-learningRate', 1)
+cmd:option('-batchSize', 500)
+cmd:option('-learningRate', 0.1)
 cmd:option('-learningRateDecay', 1e-7)
-cmd:option('-weightDecay', 0.0005)
+cmd:option('-weightDecay', 0.005)
 cmd:option('-momentum', 0.9)
 cmd:option('-epoch_step', 25)
 cmd:option('-max_epoch', 150)
@@ -111,9 +111,6 @@ function train()
   end
   local indices = torch.randperm(provider.trainData.data:size(1))
   indices = indices:long():split(opt.batchSize)
-  -- Remove last element so that all the batches have equal size
-  --indices[#indices] = nil
-  -- /!\ ALWAYS HAVE A BATCHSIZE SUCH THAT BS | 40000
 
   local tic = torch.tic()
   -- Iterate over batches

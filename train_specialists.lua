@@ -37,7 +37,8 @@ cmd:option('-unsup_data', 'default')
 cmd:option('-verbose','false', 'print informaiton about the criterion')
 cmd:option('-m','none', 'Add info to be included in the report.html')
 cmd:option('-pretrained', 'false', 'to used a pretrained net for init')
-cmd:option('-pretrained_path', 'specialists/pretrained.net', 'path to the pretrained net for initialization')
+cmd:option('-pretrained_path', 'specialists/pretrained.net', 
+  'path to the pretrained net for initialization')
 cmd:text()
 
 -- Parse input params
