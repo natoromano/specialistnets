@@ -140,7 +140,6 @@ testLogger:setNames{'% mean class accuracy (train set)',
                     '% mean class accuracy (test set)'}
 testLogger.showPlot = false
 
---[[ TODO !!!!!! ]]
 parameters, gradParameters = model:getParameters()
 
 print(c.blue'==>' ..' Setting criterion')
@@ -333,7 +332,7 @@ function train_unsupervised()
     xlua.progress(t, #indices)
 
     local inputs = uprovider.trainData.data:index(1,v)
-    targets.labels = uprovider.trainData.label
+    targets.labels = uprovider.trainData.label:index(1,v)
     targets.scores:copy(uprovider.trainData.scores:index(1,v))
     
     local feval = function(x)
@@ -373,6 +372,9 @@ if opt.unsupervised == true then
   else
     criterion = DarkKnowledgeCriterion(1.0, opt.T)
   end
+
+  -- Reinitializing learning rate
+  optimState.learningRate = opt.learningRate
 
   for i=1,opt.unsup_epochs do
     train_unsupervised()
