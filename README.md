@@ -1,14 +1,8 @@
 -------------------------------------
 CODE FOR CS231N PAPER
 -------------------------------------
-DISTILLING KNOWLEDGE FROM SPECIALIST
-CONVOLUTIONAL NEURAL NETWORKS FOR
-CLUSTERED CLASSIFICATION
+DISTILLING KNOWLEDGE FROM SPECIALIST CONVOLUTIONAL NEURAL NETWORKS FOR CLUSTERED CLASSIFICATION
 -------------------------------------
-
-Table of Contents
-=================
-
 
 Abstract
 ============
