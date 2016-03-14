@@ -1,4 +1,4 @@
---[[ Code to concatenate the outputs of all specialists using a linear layer
+---[[ Code to concatenate the outputs of all specialists using a linear layer
 This code is inspired by Sergey Zagoruyko, cf 
 https://github.com/szagoruyko/cifar.torch ]]--
 
