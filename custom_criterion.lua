@@ -52,7 +52,7 @@ function DarkKnowledgeCriterion:updateOutput(input, target)
       local probs = self.sm:forward(input / self.temp)
       if self.supervised then
           self.output = self.ce_crit:forward(input, target.labels)
-          self.output = self.output * (1 - self.alpha)
+          self.output = self.output * (1 - self.alpha) + 
               self.mse_crit:forward(probs, soft_target) * self.alpha
       else
           self.output = self.mse_crit:forward(probs, soft_target)
